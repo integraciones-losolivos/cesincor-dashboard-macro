@@ -24,8 +24,9 @@ Para usar el módulo de Homenajes con SAP HANA, copia `.env.example` como
 npm run dev:full
 ```
 
-La API expone `GET /api/health` y `GET /api/homenajes`. Este último acepta los
-parámetros opcionales `from` y `to` con formato `YYYY-MM-DD`.
+La API expone `GET /api/health`, `GET /api/homenajes` y `GET /api/prevision`.
+Los endpoints de datos aceptan los parámetros opcionales `from` y `to` con
+formato `YYYY-MM-DD`.
 
 ## Compilación
 
