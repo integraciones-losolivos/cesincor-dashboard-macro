@@ -1,0 +1,10 @@
+import { money, number } from '../utils/dashboard.js'
+
+export default function ElementsTable({ elements, rows }) {
+  const osfById = new Map(rows.map((row) => [row.id, row.osf]))
+  return <section className="card-shadow overflow-hidden rounded-[2rem] border border-slate-200/70 bg-white">
+    <div className="flex items-end justify-between border-b border-slate-100 px-5 py-4"><div><h3 className="text-base font-black text-slate-950">Elementos de las órdenes</h3><p className="mt-1 text-sm text-slate-500">Servicios cubiertos, adicionales y elementos renunciados.</p></div><span className="rounded-full bg-emerald-900 px-3 py-1 text-xs font-black text-white">{number(elements.length)} líneas</span></div>
+    <div className="overflow-x-auto p-4"><table className="min-w-full border-separate border-spacing-y-2 text-left text-sm"><thead><tr className="text-[11px] uppercase tracking-[0.15em] text-slate-400"><th className="px-3">OSF</th><th className="px-3">Clasificación</th><th className="px-3">Elemento</th><th className="px-3 text-center">Se usa</th><th className="px-3 text-right">Cantidad</th><th className="px-3 text-right">Valor</th></tr></thead><tbody>{elements.slice(0, 100).map((item) => <tr key={`${item.osf_id}-${item.linea}`} className="bg-slate-50 text-slate-700"><td className="rounded-l-2xl px-3 py-3 font-black">{osfById.get(item.osf_id)}</td><td className="px-3 py-3"><span className={`rounded-full px-2.5 py-1 text-xs font-black ${item.clasificacion === 'ADICIONAL' ? 'bg-orange-100 text-orange-700' : 'bg-emerald-100 text-emerald-700'}`}>{item.clasificacion}</span></td><td className="px-3 py-3 font-semibold">{item.elemento}</td><td className="px-3 py-3 text-center">{item.se_usa}</td><td className="px-3 py-3 text-right">{number(item.cantidad)}</td><td className="rounded-r-2xl px-3 py-3 text-right font-black">{money(item.valor_total)}</td></tr>)}</tbody></table></div>
+    {elements.length > 100 && <p className="border-t border-slate-100 px-5 py-3 text-xs text-slate-500">Mostrando las primeras 100 líneas de {number(elements.length)}.</p>}
+  </section>
+}
