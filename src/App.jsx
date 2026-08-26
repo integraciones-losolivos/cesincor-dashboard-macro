@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import {
   Banknote,
   HandHeart,
@@ -6,9 +6,21 @@ import {
   ReceiptText,
   ShieldCheck,
 } from 'lucide-react'
-import HomenajesDashboard from './pages/HomenajesDashboard.jsx'
 import ModulePlaceholder from './pages/ModulePlaceholder.jsx'
-import PrevisionDashboard from './pages/PrevisionDashboard.jsx'
+
+const HomenajesDashboard = lazy(() => import('./pages/HomenajesDashboard.jsx'))
+const PrevisionDashboard = lazy(() => import('./pages/PrevisionDashboard.jsx'))
+
+function ModuleLoadingState() {
+  return (
+    <main className="grid min-h-[calc(100vh-4.5rem)] place-items-center bg-slate-50 px-6">
+      <div className="text-center" role="status" aria-live="polite">
+        <div className="mx-auto size-10 animate-spin rounded-full border-4 border-emerald-100 border-t-emerald-700" />
+        <p className="mt-4 text-sm font-bold text-slate-600">Cargando módulo…</p>
+      </div>
+    </main>
+  )
+}
 
 const modules = [
   {
@@ -92,17 +104,19 @@ export default function App() {
         </div>
       </nav>
 
-      {activeModule === 'homenajes' ? (
-        <HomenajesDashboard areaName={selectedModule.areaName} />
-      ) : activeModule === 'prevision' ? (
-        <PrevisionDashboard areaName={selectedModule.areaName} />
-      ) : (
-        <ModulePlaceholder
-          module={selectedModule}
-          modules={modules}
-          setActiveModule={setActiveModule}
-        />
-      )}
+      <Suspense fallback={<ModuleLoadingState />}>
+        {activeModule === 'homenajes' ? (
+          <HomenajesDashboard areaName={selectedModule.areaName} />
+        ) : activeModule === 'prevision' ? (
+          <PrevisionDashboard areaName={selectedModule.areaName} />
+        ) : (
+          <ModulePlaceholder
+            module={selectedModule}
+            modules={modules}
+            setActiveModule={setActiveModule}
+          />
+        )}
+      </Suspense>
     </div>
   )
 }
