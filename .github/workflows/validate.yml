@@ -1,0 +1,50 @@
+name: Validate project
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and syntax checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate server syntax
+        run: |
+          node --check server/index.js
+          node --check server/hanaConnection.js
+          node --check server/homenajesRepository.js
+          node --check server/homenajesSql.js
+          node --check server/previsionRepository.js
+          node --check server/previsionSql.js
+
+      - name: Build frontend
+        run: pnpm build
