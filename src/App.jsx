@@ -6,6 +6,7 @@ import {
   ReceiptText,
   ShieldCheck,
 } from 'lucide-react'
+import HomenajesDashboard from './pages/HomenajesDashboard.jsx'
 import ModulePlaceholder from './pages/ModulePlaceholder.jsx'
 
 const modules = [
@@ -90,11 +91,15 @@ export default function App() {
         </div>
       </nav>
 
-      <ModulePlaceholder
-        module={selectedModule}
-        modules={modules}
-        setActiveModule={setActiveModule}
-      />
+      {activeModule === 'homenajes' ? (
+        <HomenajesDashboard areaName={selectedModule.areaName} />
+      ) : (
+        <ModulePlaceholder
+          module={selectedModule}
+          modules={modules}
+          setActiveModule={setActiveModule}
+        />
+      )}
     </div>
   )
 }
