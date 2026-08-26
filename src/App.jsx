@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import HomenajesDashboard from './pages/HomenajesDashboard.jsx'
 import ModulePlaceholder from './pages/ModulePlaceholder.jsx'
+import PrevisionDashboard from './pages/PrevisionDashboard.jsx'
 
 const modules = [
   {
@@ -93,6 +94,8 @@ export default function App() {
 
       {activeModule === 'homenajes' ? (
         <HomenajesDashboard areaName={selectedModule.areaName} />
+      ) : activeModule === 'prevision' ? (
+        <PrevisionDashboard areaName={selectedModule.areaName} />
       ) : (
         <ModulePlaceholder
           module={selectedModule}
