@@ -17,6 +17,16 @@ npm run dev
 
 La dirección local predeterminada es `http://localhost:5173`.
 
+Para usar el módulo de Homenajes con SAP HANA, copia `.env.example` como
+`.env`, completa las credenciales y ejecuta la interfaz y la API:
+
+```bash
+npm run dev:full
+```
+
+La API expone `GET /api/health` y `GET /api/homenajes`. Este último acepta los
+parámetros opcionales `from` y `to` con formato `YYYY-MM-DD`.
+
 ## Compilación
 
 ```bash
