@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AlertTriangle, BarChart3, CircleDollarSign, HandHeart, Layers3, ListTree, LoaderCircle, PlusCircle, Rows3, TrendingUp } from 'lucide-react'
 import { Area, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Line, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import ChartCard from '../components/ChartCard.jsx'
@@ -9,6 +9,7 @@ import EmptyState from '../components/EmptyState.jsx'
 import FilterPanel from '../components/FilterPanel.jsx'
 import KpiCard from '../components/KpiCard.jsx'
 import { fetchHomenajes } from '../services/homenajesApi.js'
+import { checkApiHealth } from '../services/http.js'
 import { buildKpis, filterRows, getUniqueOptions, groupBy, groupByMonth, money, number, percent, shortMoney, withShare } from '../utils/dashboard.js'
 
 const today = new Date()
@@ -16,6 +17,8 @@ const initialFilters = { search: '', fechaInicial: `${today.getFullYear()}-01-01
 const colors = ['#059669', '#2563eb', '#7c3aed', '#f97316', '#db2777', '#0891b2', '#ca8a04', '#dc2626']
 const tipoColors = { PLAN: '#2563eb', RED: '#10b981', PARTICULAR: '#f97316', REEMBOLSO: '#7c3aed' }
 const tabs = [{ id: 'resumen', label: 'Resumen ejecutivo', icon: BarChart3 }, { id: 'composicion', label: 'Composición del servicio', icon: ListTree }, { id: 'ordenes', label: 'Órdenes funerarias', icon: Rows3 }]
+const CONNECTION_CHECK_MS = 2 * 60 * 1000
+const RESUME_REFRESH_MS = 4 * 60 * 1000
 
 function TabNav({ active, onChange }) {
   return <div className="card-shadow flex flex-wrap gap-2 rounded-2xl border border-slate-200/70 bg-white p-2">{tabs.map(({ id, label, icon: Icon }) => <button key={id} type="button" onClick={() => onChange(id)} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black transition ${active === id ? 'bg-emerald-900 text-white shadow-lg shadow-emerald-900/15' : 'text-slate-500 hover:bg-emerald-50 hover:text-emerald-800'}`}><Icon className="size-4" />{label}</button>)}</div>
@@ -39,12 +42,53 @@ export default function HomenajesDashboard({ areaName = 'Homenajes' }) {
   const [data, setData] = useState({ rows: [], elements: [] })
   const [status, setStatus] = useState({ loading: true, error: '' })
   const [reloadKey, setReloadKey] = useState(0)
+  const hasLoadedData = useRef(false)
+  const lastLoadedAt = useRef(0)
 
   useEffect(() => {
     let active = true
-    setStatus({ loading: true, error: '' })
-    fetchHomenajes({ from: initialFilters.fechaInicial, to: initialFilters.fechaFinal }).then((payload) => { if (active) { setData(payload); setStatus({ loading: false, error: '' }) } }).catch((error) => { if (active) setStatus({ loading: false, error: error.message }) })
-    return () => { active = false }
+    let requestInProgress = false
+
+    async function loadData({ background = false } = {}) {
+      if (requestInProgress || !navigator.onLine) return
+      requestInProgress = true
+      if (!background && !hasLoadedData.current) setStatus({ loading: true, error: '' })
+
+      try {
+        const payload = await fetchHomenajes({ from: initialFilters.fechaInicial, to: initialFilters.fechaFinal })
+        if (active) {
+          setData(payload)
+          hasLoadedData.current = true
+          lastLoadedAt.current = Date.now()
+          setStatus({ loading: false, error: '' })
+        }
+      } catch (error) {
+        if (active && !hasLoadedData.current) setStatus({ loading: false, error: error.message })
+      } finally {
+        requestInProgress = false
+      }
+    }
+
+    function refreshAfterResume() {
+      const dataIsOld = Date.now() - lastLoadedAt.current >= RESUME_REFRESH_MS
+      if (document.visibilityState === 'visible' && navigator.onLine && dataIsOld) loadData({ background: true })
+    }
+
+    function refreshAfterReconnect() {
+      if (navigator.onLine) loadData({ background: true })
+    }
+
+    loadData()
+    const connectionTimer = window.setInterval(() => checkApiHealth().catch(() => {}), CONNECTION_CHECK_MS)
+    window.addEventListener('online', refreshAfterReconnect)
+    document.addEventListener('visibilitychange', refreshAfterResume)
+
+    return () => {
+      active = false
+      window.clearInterval(connectionTimer)
+      window.removeEventListener('online', refreshAfterReconnect)
+      document.removeEventListener('visibilitychange', refreshAfterResume)
+    }
   }, [reloadKey])
 
   const options = useMemo(() => ({ sedes: getUniqueOptions(data.rows, 'sede'), gestores: getUniqueOptions(data.rows, 'gestor'), tiposHomenaje: getUniqueOptions(data.rows, 'tipo_homenaje'), tiposExcedente: getUniqueOptions(data.rows, 'tipo_excedente'), lugaresFallecimiento: getUniqueOptions(data.rows, 'lugar_de_fallecimiento'), tiposServicio: getUniqueOptions(data.rows, 'tipo_servicio'), municipios: getUniqueOptions(data.rows, 'municipio') }), [data.rows])

@@ -1,17 +1,15 @@
+import { fetchWithRetry } from './http.js'
+
 export async function fetchPrevisionRows() {
-  const controller = new AbortController()
-  const timeout = window.setTimeout(() => controller.abort(), 180000)
   let response
 
   try {
-    response = await fetch('/api/prevision', { signal: controller.signal })
+    response = await fetchWithRetry('/api/prevision')
   } catch (error) {
     if (error.name === 'AbortError') {
       throw new Error('La consulta a SAP HANA tardó más de 3 minutos. Recargue la página para intentarlo nuevamente.')
     }
     throw error
-  } finally {
-    window.clearTimeout(timeout)
   }
 
   if (!response.ok) {
