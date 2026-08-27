@@ -50,5 +50,18 @@ Configura en Hostinger las variables `HANA_HOST`, `HANA_PORT`, `HANA_USER`,
 `HANA_SSL_VALIDATE_CERTIFICATE`. Hostinger asigna la variable `PORT`
 automáticamente.
 
+## Puente hacia HANA desde la oficina
+
+Cuando HANA solo acepta conexiones originadas en la red de la oficina, una
+instancia local de esta API puede publicarse mediante un túnel HTTPS. En el PC
+de la oficina configura `GATEWAY_SHARED_SECRET` junto con las variables HANA y
+ejecuta `npm start`. No configures `UPSTREAM_API_URLS` en el PC.
+
+En Hostinger configura la URL pública del túnel en `UPSTREAM_API_URLS` y la
+misma clave en `UPSTREAM_API_TOKEN`. Cuando estas variables existen, Express
+reenvía `/api/prevision` y `/api/homenajes` al puente en vez de intentar una
+conexión directa a HANA. Se pueden indicar varias URL separadas por comas para
+usar la siguiente cuando una no responda.
+
 Los módulos funcionales se incorporan de forma incremental mediante ramas y
 pull requests independientes.
