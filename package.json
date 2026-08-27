@@ -10,6 +10,7 @@
   },
   "scripts": {
     "start": "node server/index.js",
+    "postinstall": "npm run build",
     "dev": "vite",
     "dev:api": "node server/index.js",
     "dev:full": "concurrently \"npm run dev:api\" \"npm run dev\"",
