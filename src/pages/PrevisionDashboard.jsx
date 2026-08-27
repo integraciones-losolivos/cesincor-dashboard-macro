@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   BadgeDollarSign,
   Building2,
@@ -29,6 +29,7 @@ import ExecutiveBalance from '../components/prevision/ExecutiveBalance.jsx'
 import KpiCard from '../components/KpiCard.jsx'
 import PrevisionFilters from '../components/prevision/PrevisionFilters.jsx'
 import { fetchPrevisionRows } from '../services/previsionApi.js'
+import { checkApiHealth } from '../services/http.js'
 import { getUniqueOptions, money, number, percent, shortMoney } from '../utils/dashboard.js'
 import {
   buildPrevisionKpis,
@@ -83,6 +84,9 @@ const reportViews = [
   { id: 'mascotas', label: 'Mascotas', icon: PawPrint },
 ]
 
+const CONNECTION_CHECK_MS = 2 * 60 * 1000
+const RESUME_REFRESH_MS = 4 * 60 * 1000
+
 export default function PrevisionDashboard({ areaName = 'Prevision' }) {
   const [filters, setFilters] = useState(initialFilters)
   const [activeView, setActiveView] = useState('activos')
@@ -90,37 +94,63 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [loadAttempt, setLoadAttempt] = useState(0)
+  const hasLoadedData = useRef(false)
+  const lastLoadedAt = useRef(0)
 
   useEffect(() => {
     let isMounted = true
+    let requestInProgress = false
 
-    async function loadRows() {
+    async function loadRows({ background = false } = {}) {
+      if (requestInProgress || !navigator.onLine) return
+      requestInProgress = true
       try {
-        setIsLoading(true)
-        setLoadError('')
+        if (!background && !hasLoadedData.current) setIsLoading(true)
+        if (!background) setLoadError('')
         const rows = await fetchPrevisionRows()
         if (isMounted) {
           setPrevisionRows(rows)
-          const dateRange = getAvailableDateRange(rows)
-          if (dateRange) {
-            setFilters((current) => ({
-              ...current,
-              fechaInicial: dateRange.latestMonthStart,
-              fechaFinal: dateRange.latestMonthEnd,
-            }))
+          if (!hasLoadedData.current) {
+            const dateRange = getAvailableDateRange(rows)
+            if (dateRange) {
+              setFilters((current) => ({
+                ...current,
+                fechaInicial: dateRange.latestMonthStart,
+                fechaFinal: dateRange.latestMonthEnd,
+              }))
+            }
           }
+          hasLoadedData.current = true
+          lastLoadedAt.current = Date.now()
+          setLoadError('')
         }
       } catch (error) {
-        if (isMounted) setLoadError(error.message)
+        if (isMounted && !hasLoadedData.current) setLoadError(error.message)
       } finally {
+        requestInProgress = false
         if (isMounted) setIsLoading(false)
       }
     }
 
+    function refreshAfterResume() {
+      const dataIsOld = Date.now() - lastLoadedAt.current >= RESUME_REFRESH_MS
+      if (document.visibilityState === 'visible' && navigator.onLine && dataIsOld) loadRows({ background: true })
+    }
+
+    function refreshAfterReconnect() {
+      if (navigator.onLine) loadRows({ background: true })
+    }
+
     loadRows()
+    const connectionTimer = window.setInterval(() => checkApiHealth().catch(() => {}), CONNECTION_CHECK_MS)
+    window.addEventListener('online', refreshAfterReconnect)
+    document.addEventListener('visibilitychange', refreshAfterResume)
 
     return () => {
       isMounted = false
+      window.clearInterval(connectionTimer)
+      window.removeEventListener('online', refreshAfterReconnect)
+      document.removeEventListener('visibilitychange', refreshAfterResume)
     }
   }, [loadAttempt])
 

@@ -75,6 +75,13 @@ export async function fetchPrevisionRows(range = {}) {
       cachedRangeKey = rangeKey
       return rows
     })
+    .catch((error) => {
+      if (cachedRows && cachedRangeKey === rangeKey) {
+        console.warn('[prevision] HANA no respondió; se conserva el último resultado válido.', error.message)
+        return cachedRows
+      }
+      throw error
+    })
     .finally(() => {
       activeQuery = null
       activeRangeKey = ''

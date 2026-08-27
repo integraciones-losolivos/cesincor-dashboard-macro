@@ -12,8 +12,19 @@ const port = Number(process.env.PORT || process.env.API_PORT || 3001)
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const distDirectory = path.join(projectRoot, 'dist')
 
-app.get('/api/health', (_request, response) => {
-  response.json({ ok: true, dataSource: hasUpstreamApi() ? 'office-bridge' : 'hana-direct' })
+app.get('/api/health', async (_request, response) => {
+  if (!hasUpstreamApi()) {
+    response.json({ ok: true, dataSource: 'hana-direct' })
+    return
+  }
+
+  try {
+    await fetchUpstreamJson('/api/health')
+    response.json({ ok: true, dataSource: 'office-bridge', bridgeOk: true })
+  } catch (error) {
+    console.warn('[api/health] El puente de la oficina no respondió.', error.message)
+    response.status(503).json({ ok: false, dataSource: 'office-bridge', bridgeOk: false })
+  }
 })
 
 function requireGatewayToken(request, response, next) {

@@ -58,14 +58,21 @@ export async function fetchHomenajes(range = {}) {
   const hit = cache.get(key)
   if (hit && Date.now() - hit.createdAt < CACHE_TTL_MS) return hit.data
 
-  const connection = await connectHana()
+  let connection
   try {
+    connection = await connectHana()
     const rows = await executeQuery(connection, buildHomenajesSql(range))
     const elements = await executeQuery(connection, buildHomenajeElementsSql(range))
     const data = { rows: rows.map(normalizeRow), elements: elements.map(normalizeElement) }
     cache.set(key, { createdAt: Date.now(), data })
     return data
+  } catch (error) {
+    if (hit) {
+      console.warn('[homenajes] HANA no respondió; se conserva el último resultado válido.', error.message)
+      return hit.data
+    }
+    throw error
   } finally {
-    connection.disconnect()
+    connection?.disconnect()
   }
 }
