@@ -63,5 +63,16 @@ reenvía `/api/prevision` y `/api/homenajes` al puente en vez de intentar una
 conexión directa a HANA. Se pueden indicar varias URL separadas por comas para
 usar la siguiente cuando una no responda.
 
+En Windows, después de configurar `.env`, inicia ambos procesos con:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/start-office-bridge.ps1
+```
+
+Mantén esa consola abierta. Los túneles rápidos generan una URL diferente en
+cada inicio, por lo que se debe actualizar `UPSTREAM_API_URLS` en Hostinger y
+reimplementar. Para producción se recomienda migrar a un túnel con nombre y
+dominio estable.
+
 Los módulos funcionales se incorporan de forma incremental mediante ramas y
 pull requests independientes.
