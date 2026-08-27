@@ -1,10 +1,14 @@
 import 'dotenv/config'
 import express from 'express'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { fetchHomenajes } from './homenajesRepository.js'
 import { fetchPrevisionRows } from './previsionRepository.js'
 
 const app = express()
-const port = Number(process.env.API_PORT || 3001)
+const port = Number(process.env.PORT || process.env.API_PORT || 3001)
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const distDirectory = path.join(projectRoot, 'dist')
 
 app.get('/api/health', (_request, response) => {
   response.json({ ok: true })
@@ -42,6 +46,16 @@ app.get('/api/homenajes', async (request, response) => {
   }
 })
 
+app.use(express.static(distDirectory))
+
+app.use((request, response, next) => {
+  if (request.method === 'GET' && request.accepts('html')) {
+    response.sendFile(path.join(distDirectory, 'index.html'))
+    return
+  }
+  next()
+})
+
 app.listen(port, () => {
-  console.log(`API Crystal Dashboard escuchando en http://127.0.0.1:${port}`)
+  console.log(`Crystal Dashboard escuchando en el puerto ${port}`)
 })

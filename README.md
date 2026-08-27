@@ -34,5 +34,21 @@ formato `YYYY-MM-DD`.
 npm run build
 ```
 
+## Despliegue en Hostinger
+
+La aplicación se despliega como una aplicación Node.js única. Express sirve el
+frontend compilado desde `dist` y también los endpoints bajo `/api`.
+
+- Versión de Node.js: 22
+- Comando de instalación: `npm ci`
+- Comando de compilación: `npm run build`
+- Comando de inicio: `npm start`
+- Archivo de entrada, si Hostinger lo solicita: `server/index.js`
+
+Configura en Hostinger las variables `HANA_HOST`, `HANA_PORT`, `HANA_USER`,
+`HANA_PASSWORD`, `HANA_SCHEMA`, `HANA_ENCRYPT` y
+`HANA_SSL_VALIDATE_CERTIFICATE`. Hostinger asigna la variable `PORT`
+automáticamente.
+
 Los módulos funcionales se incorporan de forma incremental mediante ramas y
 pull requests independientes.
