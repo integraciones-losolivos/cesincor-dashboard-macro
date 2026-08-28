@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 
 $projectRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 $envFile = Join-Path $projectRoot '.env'
-$publicUrl = 'https://acid-dose-ultra.ngrok-free.dev'
+$publicUrl = if ($env:NGROK_PUBLIC_URL) { $env:NGROK_PUBLIC_URL.TrimEnd('/') } else { 'https://acid-dose-ultra.ngrok-free.dev' }
 
 try {
   $ngrok = (Get-Command ngrok -ErrorAction Stop).Source
@@ -21,6 +21,14 @@ if (-not $hasSecret) {
 
 $api = $null
 $ownsApiProcess = $false
+
+function Get-NgrokTunnels {
+  try {
+    return @((Invoke-RestMethod -Uri 'http://127.0.0.1:4040/api/tunnels' -TimeoutSec 2).tunnels)
+  } catch {
+    return @()
+  }
+}
 
 try {
   $health = $null
@@ -44,6 +52,18 @@ try {
   }
 
   if (-not $health.ok) { throw 'El API local no respondió correctamente.' }
+
+  $activeTunnels = Get-NgrokTunnels
+  $existingTunnel = $activeTunnels | Where-Object { $_.public_url -eq $publicUrl } | Select-Object -First 1
+  if ($existingTunnel) {
+    Write-Host "El túnel de ngrok ya está activo en $publicUrl. Se reutiliza sin crear otro endpoint." -ForegroundColor Green
+    return
+  }
+
+  if ($activeTunnels.Count -gt 0) {
+    $activeUrls = ($activeTunnels | ForEach-Object { $_.public_url }) -join ', '
+    throw "Ya existe un túnel ngrok activo ($activeUrls). No se creará otro para evitar consumir recursos del plan. Ciérralo desde su consola antes de iniciar una URL distinta."
+  }
 
   Write-Host "Puente local disponible en $publicUrl" -ForegroundColor Green
   & $ngrok http 3001 --url $publicUrl
