@@ -23,6 +23,7 @@ function ModuleLoadingState() {
 }
 
 const modules = [
+  {
     id: 'prevision',
     name: 'Previsión',
     areaName: 'Previsión Exequial',
