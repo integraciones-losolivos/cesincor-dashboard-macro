@@ -6,6 +6,7 @@ import {
   HeartHandshake,
   Medal,
   PawPrint,
+  LogOut,
   RefreshCw,
   ShieldCheck,
   UsersRound,
@@ -28,6 +29,7 @@ import EmptyState from '../components/EmptyState.jsx'
 import ExecutiveBalance from '../components/prevision/ExecutiveBalance.jsx'
 import KpiCard from '../components/KpiCard.jsx'
 import PrevisionFilters from '../components/prevision/PrevisionFilters.jsx'
+import RetirosDashboard from './RetirosDashboard.jsx'
 import { fetchPrevisionRows } from '../services/previsionApi.js'
 import { checkApiHealth } from '../services/http.js'
 import { getUniqueOptions, money, number, percent, shortMoney } from '../utils/dashboard.js'
@@ -100,6 +102,7 @@ const reportViews = [
   { id: 'contratos', label: 'Contratos y planes', icon: ClipboardList },
   { id: 'valores', label: 'Valores', icon: BadgeDollarSign },
   { id: 'mascotas', label: 'Mascotas', icon: PawPrint },
+  { id: 'retiros', label: 'Retiros', icon: LogOut },
 ]
 
 const CONNECTION_CHECK_MS = 2 * 60 * 1000
@@ -292,6 +295,7 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
                 />
               )}
               {activeView === 'mascotas' && <PetsDashboard petSummary={petSummary} />}
+              {activeView === 'retiros' && <RetirosDashboard embedded />}
             </>
             )}
           </>
@@ -362,7 +366,7 @@ function PrevisionLoadingState() {
 
 function ReportTabs({ activeView, setActiveView }) {
   return (
-    <nav className="card-shadow grid gap-2 rounded-2xl border border-slate-200 bg-white p-2 sm:grid-cols-2 xl:grid-cols-4">
+    <nav className="card-shadow grid gap-2 rounded-2xl border border-slate-200 bg-white p-2 sm:grid-cols-2 xl:grid-cols-5">
       {reportViews.map((view) => {
         const Icon = view.icon
         const isActive = activeView === view.id
