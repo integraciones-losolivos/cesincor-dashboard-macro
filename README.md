@@ -24,7 +24,7 @@ Para usar el módulo de Homenajes con SAP HANA, copia `.env.example` como
 npm run dev:full
 ```
 
-La API expone `GET /api/health`, `GET /api/homenajes` y `GET /api/prevision`.
+La API expone `GET /api/health`, `GET /api/homenajes`, `GET /api/prevision` y `GET /api/retiros`.
 Los endpoints de datos aceptan los parámetros opcionales `from` y `to` con
 formato `YYYY-MM-DD`.
 
@@ -59,7 +59,7 @@ ejecuta `npm start`. No configures `UPSTREAM_API_URLS` en el PC.
 
 En Hostinger configura la URL pública del túnel en `UPSTREAM_API_URLS` y la
 misma clave en `UPSTREAM_API_TOKEN`. Cuando estas variables existen, Express
-reenvía `/api/prevision` y `/api/homenajes` al puente en vez de intentar una
+reenvía `/api/prevision`, `/api/homenajes` y `/api/retiros` al puente en vez de intentar una
 conexión directa a HANA. Se pueden indicar varias URL separadas por comas para
 usar la siguiente cuando una no responda.
 
