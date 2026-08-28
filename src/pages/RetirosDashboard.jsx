@@ -9,6 +9,8 @@ import { fetchRetiros } from '../services/retirosApi.js'
 import { getUniqueOptions, monthLabel, normalizeText, number } from '../utils/dashboard.js'
 
 const colors = ['#e11d48', '#f97316', '#2563eb', '#7c3aed', '#0f766e', '#ca8a04']
+const DATA_YEAR = new Date().getFullYear()
+const INITIAL_DATA_RANGE = { from: `${DATA_YEAR}-01-01`, to: `${DATA_YEAR}-12-31` }
 
 function group(rows, key) {
   const map = new Map()
@@ -22,7 +24,7 @@ export default function RetirosDashboard({ areaName = 'Retiros', embedded = fals
   const [error, setError] = useState('')
   const [filters, setFilters] = useState({ search: '', sede: 'TODOS', tipo: 'TODOS', entidad: 'TODOS' })
 
-  useEffect(() => { fetchRetiros().then(setRows).catch((e) => setError(e.message)).finally(() => setLoading(false)) }, [])
+  useEffect(() => { fetchRetiros(INITIAL_DATA_RANGE).then(setRows).catch((e) => setError(e.message)).finally(() => setLoading(false)) }, [])
   const filtered = useMemo(() => rows.filter((row) => {
     const search = normalizeText(filters.search)
     return (!search || [row.contrato, row.nombre, row.documento, row.plan, row.asesor, row.entidad].map(normalizeText).some((v) => v.includes(search))) &&

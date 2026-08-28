@@ -107,6 +107,8 @@ const reportViews = [
 
 const CONNECTION_CHECK_MS = 2 * 60 * 1000
 const RESUME_REFRESH_MS = 4 * 60 * 1000
+const DATA_YEAR = new Date().getFullYear()
+const INITIAL_DATA_RANGE = { from: `${DATA_YEAR}-01-01`, to: `${DATA_YEAR}-12-31` }
 
 export default function PrevisionDashboard({ areaName = 'Prevision' }) {
   const [filters, setFilters] = useState(initialFilters)
@@ -128,7 +130,7 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
       try {
         if (!background && !hasLoadedData.current) setIsLoading(true)
         if (!background) setLoadError('')
-        const rows = await fetchPrevisionRows()
+        const rows = await fetchPrevisionRows(INITIAL_DATA_RANGE)
         if (isMounted) {
           setPrevisionRows(rows)
           if (!hasLoadedData.current) {

@@ -1,10 +1,14 @@
 import { fetchWithRetry } from './http.js'
 
-export async function fetchPrevisionRows() {
+export async function fetchPrevisionRows({ from = '', to = '' } = {}) {
   let response
+  const search = new URLSearchParams()
+  if (from) search.set('from', from)
+  if (to) search.set('to', to)
+  const endpoint = `/api/prevision${search.size ? `?${search}` : ''}`
 
   try {
-    response = await fetchWithRetry('/api/prevision')
+    response = await fetchWithRetry(endpoint)
   } catch (error) {
     if (error.name === 'AbortError') {
       throw new Error('La consulta a SAP HANA tardó más de 3 minutos. Recargue la página para intentarlo nuevamente.')

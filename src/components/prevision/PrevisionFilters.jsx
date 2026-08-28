@@ -71,7 +71,7 @@ export default function PrevisionFilters({ filters, setFilters, options, resultC
           </PeriodButton>
           <PeriodButton onClick={() => setPeriod('sixMonths')}>Últimos 6 meses</PeriodButton>
           <PeriodButton active={!filters.fechaInicial && !filters.fechaFinal} onClick={() => setPeriod('all')}>
-            Todo el histórico
+            Todo el año
           </PeriodButton>
         </div>
       </div>
