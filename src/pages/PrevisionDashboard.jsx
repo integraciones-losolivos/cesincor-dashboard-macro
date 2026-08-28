@@ -60,7 +60,25 @@ const initialFilters = {
 }
 
 function getAvailableDateRange(rows) {
-  const dates = rows.map((row) => row.fecha).filter(Boolean).sort()
+  const currentYear = new Date().getFullYear()
+  const dates = rows
+    .map((row) => row.fecha)
+    .filter((value) => {
+      const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
+      if (!match) return false
+      const year = Number(match[1])
+      const month = Number(match[2])
+      const day = Number(match[3])
+      const candidate = new Date(year, month - 1, day)
+      return (
+        year >= 1900 &&
+        year <= currentYear + 1 &&
+        candidate.getFullYear() === year &&
+        candidate.getMonth() === month - 1 &&
+        candidate.getDate() === day
+      )
+    })
+    .sort()
   if (!dates.length) return null
 
   const latest = dates.at(-1)

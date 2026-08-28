@@ -2,16 +2,38 @@ import { connectHana, executeQuery } from './hanaConnection.js'
 import { buildPrevisionSql } from './previsionSql.js'
 
 const CACHE_TTL_MS = Number(process.env.PREVISION_CACHE_TTL_MS || 5 * 60 * 1000)
+const MIN_DATA_YEAR = 1900
 let cachedRows = null
 let cacheCreatedAt = 0
 let cachedRangeKey = ''
 let activeQuery = null
 let activeRangeKey = ''
 
+function normalizeDataDate(value) {
+  if (!value) return null
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (!match) return null
+
+  const [, yearText, monthText, dayText] = match
+  const year = Number(yearText)
+  const month = Number(monthText)
+  const day = Number(dayText)
+  const maxYear = new Date().getFullYear() + 1
+  const candidate = new Date(Date.UTC(year, month - 1, day))
+  const isRealDate =
+    candidate.getUTCFullYear() === year &&
+    candidate.getUTCMonth() === month - 1 &&
+    candidate.getUTCDate() === day
+
+  return isRealDate && year >= MIN_DATA_YEAR && year <= maxYear
+    ? `${yearText}-${monthText}-${dayText}`
+    : null
+}
+
 function normalizeApiRow(row, index) {
   return {
     id: index + 1,
-    fecha: row.FECHA || row.fecha,
+    fecha: normalizeDataDate(row.FECHA || row.fecha),
     sede: row.LOCALIDAD || row.sede || 'SIN LOCALIDAD',
     asesor: row.ASESOR || row.asesor || 'SIN NOMBRE',
     convenio: row.NOMBRE_CONVENIO || row.convenio || 'SIN CONVENIO',
