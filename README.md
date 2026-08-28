@@ -69,11 +69,11 @@ En Windows, después de configurar `.env`, inicia el puente con:
 powershell -ExecutionPolicy Bypass -File scripts/start-office-bridge.ps1
 ```
 
-El script usa la URL estable `https://acid-dose-ultra.ngrok-free.dev` por
-defecto; se puede cambiar con `NGROK_PUBLIC_URL`. Antes de abrir un túnel,
-revisa el inspector local de ngrok y reutiliza el túnel ya activo para no
-consumir más endpoints o sesiones del plan. Mantén abierta únicamente la
-consola que creó el túnel.
+El script usa Cloudflare Tunnel y no requiere una cuenta o recursos de ngrok.
+Al iniciar, Cloudflare mostrará una URL temporal `https://...trycloudflare.com`.
+Actualiza `UPSTREAM_API_URLS` en Hostinger con esa URL y mantén abierta la
+consola que creó el túnel. Si se requiere una URL fija, se puede configurar un
+Cloudflare Tunnel con nombre y un dominio propio.
 
 Los módulos funcionales se incorporan de forma incremental mediante ramas y
 pull requests independientes.

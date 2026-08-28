@@ -2,13 +2,13 @@ $ErrorActionPreference = 'Stop'
 
 $projectRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
 $envFile = Join-Path $projectRoot '.env'
-$publicUrl = if ($env:NGROK_PUBLIC_URL) { $env:NGROK_PUBLIC_URL.TrimEnd('/') } else { 'https://acid-dose-ultra.ngrok-free.dev' }
-
-try {
-  $ngrok = (Get-Command ngrok -ErrorAction Stop).Source
-} catch {
-  throw 'No se encontró ngrok. Instálalo y configura el authtoken antes de iniciar el puente.'
-}
+$cloudflaredPaths = @(
+  (Get-Command cloudflared -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue),
+  (Join-Path $env:LOCALAPPDATA 'Programs\cloudflared\cloudflared.exe'),
+  'C:\Program Files (x86)\cloudflared\cloudflared.exe'
+)
+$cloudflared = $cloudflaredPaths | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
+if (-not $cloudflared) { throw 'No se encontró cloudflared. Instálalo antes de iniciar el puente.' }
 
 if (-not (Test-Path -LiteralPath $envFile)) {
   throw 'No se encontró el archivo .env del proyecto.'
@@ -21,14 +21,6 @@ if (-not $hasSecret) {
 
 $api = $null
 $ownsApiProcess = $false
-
-function Get-NgrokTunnels {
-  try {
-    return @((Invoke-RestMethod -Uri 'http://127.0.0.1:4040/api/tunnels' -TimeoutSec 2).tunnels)
-  } catch {
-    return @()
-  }
-}
 
 try {
   $health = $null
@@ -53,20 +45,10 @@ try {
 
   if (-not $health.ok) { throw 'El API local no respondió correctamente.' }
 
-  $activeTunnels = Get-NgrokTunnels
-  $existingTunnel = $activeTunnels | Where-Object { $_.public_url -eq $publicUrl } | Select-Object -First 1
-  if ($existingTunnel) {
-    Write-Host "El túnel de ngrok ya está activo en $publicUrl. Se reutiliza sin crear otro endpoint." -ForegroundColor Green
-    return
-  }
-
-  if ($activeTunnels.Count -gt 0) {
-    $activeUrls = ($activeTunnels | ForEach-Object { $_.public_url }) -join ', '
-    throw "Ya existe un túnel ngrok activo ($activeUrls). No se creará otro para evitar consumir recursos del plan. Ciérralo desde su consola antes de iniciar una URL distinta."
-  }
-
-  Write-Host "Puente local disponible en $publicUrl" -ForegroundColor Green
-  & $ngrok http 3001 --url $publicUrl
+  Write-Host 'Puente local iniciado con Cloudflare Tunnel.' -ForegroundColor Green
+  Write-Host 'Copia la URL https://...trycloudflare.com que aparecerá abajo en UPSTREAM_API_URLS de Hostinger.' -ForegroundColor Yellow
+  Write-Host 'Mantén esta ventana abierta mientras se utilice el dashboard.' -ForegroundColor Yellow
+  & $cloudflared tunnel --url http://127.0.0.1:3001 --no-autoupdate
 } finally {
   if ($ownsApiProcess -and $api -and -not $api.HasExited) { Stop-Process -Id $api.Id }
 }
