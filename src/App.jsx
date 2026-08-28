@@ -4,12 +4,14 @@ import {
   HandHeart,
   LayoutDashboard,
   ReceiptText,
+  LogOut,
   ShieldCheck,
 } from 'lucide-react'
 import ModulePlaceholder from './pages/ModulePlaceholder.jsx'
 
 const HomenajesDashboard = lazy(() => import('./pages/HomenajesDashboard.jsx'))
 const PrevisionDashboard = lazy(() => import('./pages/PrevisionDashboard.jsx'))
+const RetirosDashboard = lazy(() => import('./pages/RetirosDashboard.jsx'))
 
 function ModuleLoadingState() {
   return (
@@ -23,6 +25,14 @@ function ModuleLoadingState() {
 }
 
 const modules = [
+  {
+    id: 'retiros',
+    name: 'Retiros',
+    areaName: 'Retiros',
+    status: 'Activo',
+    icon: LogOut,
+    description: 'Cancelaciones y retiros de titulares, adicionales y mascotas.',
+  },
   {
     id: 'prevision',
     name: 'Previsión',
@@ -109,6 +119,8 @@ export default function App() {
           <HomenajesDashboard areaName={selectedModule.areaName} />
         ) : activeModule === 'prevision' ? (
           <PrevisionDashboard areaName={selectedModule.areaName} />
+        ) : activeModule === 'retiros' ? (
+          <RetirosDashboard areaName={selectedModule.areaName} />
         ) : (
           <ModulePlaceholder
             module={selectedModule}

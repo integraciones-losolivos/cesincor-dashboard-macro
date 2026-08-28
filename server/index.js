@@ -5,6 +5,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { fetchHomenajes } from './homenajesRepository.js'
 import { fetchPrevisionRows } from './previsionRepository.js'
+import { fetchRetiros } from './retirosRepository.js'
 import { fetchUpstreamJson, hasUpstreamApi } from './upstreamApi.js'
 
 const app = express()
@@ -72,6 +73,17 @@ app.get('/api/homenajes', requireGatewayToken, async (request, response) => {
       message: 'No fue posible consultar las órdenes de servicio funerario.',
       ...(process.env.NODE_ENV === 'development' ? { detail: error.message } : {}),
     })
+  }
+})
+
+app.get('/api/retiros', requireGatewayToken, async (request, response) => {
+  try {
+    const range = { from: String(request.query.from || ''), to: String(request.query.to || '') }
+    const data = hasUpstreamApi() ? await fetchUpstreamJson('/api/retiros', range) : { rows: await fetchRetiros(range) }
+    response.json(data)
+  } catch (error) {
+    console.error('[api/retiros]', error)
+    response.status(500).json({ message: 'No fue posible consultar los retiros.' })
   }
 })
 
