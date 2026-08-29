@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   BadgeDollarSign,
   Building2,
@@ -106,9 +106,26 @@ const reportViews = [
 ]
 
 const CONNECTION_CHECK_MS = 2 * 60 * 1000
-const RESUME_REFRESH_MS = 4 * 60 * 1000
+const RESUME_REFRESH_MS = 30 * 60 * 1000
 const DATA_YEAR = new Date().getFullYear()
-const INITIAL_DATA_RANGE = { from: `${DATA_YEAR}-01-01`, to: `${DATA_YEAR}-12-31` }
+
+function yearRange(year) {
+  return { from: `${year}-01-01`, to: `${year}-12-31` }
+}
+
+function mergeRows(current, incoming) {
+  const rows = new Map(current.map((row) => [row.id, row]))
+  incoming.forEach((row) => rows.set(row.id, row))
+  return Array.from(rows.values())
+}
+
+function requestedYears(filters) {
+  if (!filters.fechaInicial || !filters.fechaFinal) return []
+  const fromYear = Number(filters.fechaInicial.slice(0, 4))
+  const toYear = Number(filters.fechaFinal.slice(0, 4))
+  if (!Number.isInteger(fromYear) || !Number.isInteger(toYear) || fromYear > toYear) return []
+  return Array.from({ length: toYear - fromYear + 1 }, (_, index) => fromYear + index)
+}
 
 export default function PrevisionDashboard({ areaName = 'Prevision' }) {
   const [filters, setFilters] = useState(initialFilters)
@@ -117,22 +134,45 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [loadAttempt, setLoadAttempt] = useState(0)
+  const [loadedYears, setLoadedYears] = useState(() => new Set())
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+  const [visitedViews, setVisitedViews] = useState(() => new Set(['activos']))
   const hasLoadedData = useRef(false)
   const lastLoadedAt = useRef(0)
+  const activeRequests = useRef(new Map())
+
+  const loadYear = useCallback(async (year, { refresh = false, background = false } = {}) => {
+    const requestKey = `${year}:${refresh ? 'refresh' : 'load'}`
+    if (activeRequests.current.has(requestKey)) return activeRequests.current.get(requestKey)
+
+    const request = (async () => {
+      if (!background) setIsLoadingHistory(true)
+      try {
+        const rows = await fetchPrevisionRows({ ...yearRange(year), refresh: refresh ? 'incremental' : '' })
+        setPrevisionRows((current) => mergeRows(current, rows))
+        setLoadedYears((current) => new Set(current).add(year))
+        lastLoadedAt.current = Date.now()
+        return rows
+      } finally {
+        activeRequests.current.delete(requestKey)
+        if (!background) setIsLoadingHistory(false)
+      }
+    })()
+
+    activeRequests.current.set(requestKey, request)
+    return request
+  }, [])
 
   useEffect(() => {
     let isMounted = true
-    let requestInProgress = false
 
     async function loadRows({ background = false } = {}) {
-      if (requestInProgress || !navigator.onLine) return
-      requestInProgress = true
+      if (!navigator.onLine) return
       try {
         if (!background && !hasLoadedData.current) setIsLoading(true)
         if (!background) setLoadError('')
-        const rows = await fetchPrevisionRows(INITIAL_DATA_RANGE)
+        const rows = await loadYear(DATA_YEAR, { refresh: background, background })
         if (isMounted) {
-          setPrevisionRows(rows)
           if (!hasLoadedData.current) {
             const dateRange = getAvailableDateRange(rows)
             if (dateRange) {
@@ -150,7 +190,6 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
       } catch (error) {
         if (isMounted && !hasLoadedData.current) setLoadError(error.message)
       } finally {
-        requestInProgress = false
         if (isMounted) setIsLoading(false)
       }
     }
@@ -175,7 +214,52 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
       window.removeEventListener('online', refreshAfterReconnect)
       document.removeEventListener('visibilitychange', refreshAfterResume)
     }
-  }, [loadAttempt])
+  }, [loadAttempt, loadYear])
+
+  useEffect(() => {
+    const missingYears = requestedYears(filters).filter((year) => !loadedYears.has(year))
+    if (!missingYears.length || !navigator.onLine) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        for (const year of missingYears) {
+          if (cancelled) return
+          await loadYear(year)
+        }
+      } catch (error) {
+        if (!cancelled) setLoadError(error.message)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [filters.fechaInicial, filters.fechaFinal, loadedYears, loadYear])
+
+  const oldestLoadedYear = loadedYears.size ? Math.min(...loadedYears) : DATA_YEAR
+  const loadPreviousYear = async () => {
+    const year = oldestLoadedYear - 1
+    try {
+      setLoadError('')
+      await loadYear(year)
+      setFilters((current) => ({ ...current, fechaInicial: `${year}-01-01`, fechaFinal: current.fechaFinal || `${DATA_YEAR}-12-31` }))
+    } catch (error) {
+      setLoadError(error.message)
+    }
+  }
+
+  const refreshVisibleYears = async () => {
+    const years = requestedYears(filters)
+    const targets = years.length ? years : [DATA_YEAR]
+    try {
+      setLoadError('')
+      for (const year of targets) await loadYear(year, { refresh: true })
+    } catch (error) {
+      setLoadError(error.message)
+    }
+  }
+
+  const selectView = (view) => {
+    setActiveView(view)
+    setVisitedViews((current) => new Set(current).add(view))
+  }
 
   const options = useMemo(
     () => ({
@@ -229,9 +313,15 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
       </section>
 
       <section className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-        {isLoading ? (
+        <ReportTabs activeView={activeView} setActiveView={selectView} />
+        {visitedViews.has('retiros') && (
+          <div hidden={activeView !== 'retiros'}>
+            <RetirosDashboard embedded active={activeView === 'retiros'} />
+          </div>
+        )}
+        {activeView !== 'retiros' && (isLoading ? (
           <PrevisionLoadingState />
-        ) : loadError ? (
+        ) : loadError && !previsionRows.length ? (
           <section className="card-shadow rounded-[2rem] border border-amber-200 bg-white px-6 py-10 text-center sm:px-10">
             <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-amber-50 text-amber-700 ring-1 ring-amber-200">
               <RefreshCw className="size-6" strokeWidth={2.5} />
@@ -250,28 +340,37 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
           </section>
         ) : (
           <>
-            <PrevisionFilters
+            {loadError && (
+              <div className="flex items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
+                <span>{loadError} Se conservan los datos que ya estaban cargados.</span>
+                <button type="button" onClick={() => setLoadError('')} className="shrink-0 underline">Cerrar</button>
+              </div>
+            )}
+            {activeView !== 'retiros' && <PrevisionFilters
               filters={filters}
               setFilters={setFilters}
               options={options}
               resultCount={filteredRows.length}
               initialFilters={initialFilters}
               availableDateRange={availableDateRange}
-            />
+              oldestLoadedYear={oldestLoadedYear}
+              isLoadingHistory={isLoadingHistory}
+              onLoadPreviousYear={loadPreviousYear}
+              onRefresh={refreshVisibleYears}
+            />}
 
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {activeView !== 'retiros' && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <KpiCard title="Contratos activos" value={number(kpis.contratosActivos)} helper={`Promedio por contrato: ${money(kpis.valorPromedioContrato)}.`} icon={<ClipboardList className="size-6" strokeWidth={2.4} />} accent="blue" />
               <KpiCard title="Personas activas" value={number(kpis.personasActivas)} helper={`${number(kpis.totalTitulares)} titulares y ${number(kpis.totalBeneficiarios)} beneficiarios.`} icon={<UsersRound className="size-6" strokeWidth={2.4} />} accent="emerald" />
               <KpiCard title="Valor mensual activo" value={money(kpis.ingresoMensual)} helper={`Proyeccion anual: ${money(kpis.ingresoAnualizado)}.`} icon={<BadgeDollarSign className="size-6" strokeWidth={2.4} />} accent="violet" />
               <KpiCard title="Mascotas activas" value={number(kpis.totalMascotas)} helper={`${number(kpis.personasRetiradas)} personas retiradas dentro de contratos activos.`} icon={<PawPrint className="size-6" strokeWidth={2.4} />} accent="orange" />
-            </div>
+            </div>}
 
-            {!filteredRows.length ? (
+            {activeView !== 'retiros' && (!filteredRows.length ? (
             <EmptyState />
           ) : (
             <>
               <ExecutiveBalance kpis={kpis} />
-              <ReportTabs activeView={activeView} setActiveView={setActiveView} />
               {activeView === 'activos' && (
                 <ActivePortfolioCharts
                   monthly={monthly}
@@ -297,11 +396,10 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
                 />
               )}
               {activeView === 'mascotas' && <PetsDashboard petSummary={petSummary} />}
-              {activeView === 'retiros' && <RetirosDashboard embedded />}
             </>
-            )}
+            ))}
           </>
-        )}
+        ))}
       </section>
     </main>
   )

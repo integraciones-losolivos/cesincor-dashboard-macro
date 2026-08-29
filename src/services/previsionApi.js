@@ -1,10 +1,11 @@
 import { fetchWithRetry } from './http.js'
 
-export async function fetchPrevisionRows({ from = '', to = '' } = {}) {
+export async function fetchPrevisionRows({ from = '', to = '', refresh = '' } = {}) {
   let response
   const search = new URLSearchParams()
   if (from) search.set('from', from)
   if (to) search.set('to', to)
+  if (refresh) search.set('refresh', refresh)
   const endpoint = `/api/prevision${search.size ? `?${search}` : ''}`
 
   try {

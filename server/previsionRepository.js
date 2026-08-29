@@ -1,13 +1,9 @@
 import { connectHana, executeQuery } from './hanaConnection.js'
 import { buildPrevisionSql } from './previsionSql.js'
+import { createPersistentRangeCache } from './persistentRangeCache.js'
 
-const CACHE_TTL_MS = Number(process.env.PREVISION_CACHE_TTL_MS || 5 * 60 * 1000)
+const CACHE_TTL_MS = Number(process.env.PREVISION_CACHE_TTL_MS || 6 * 60 * 60 * 1000)
 const MIN_DATA_YEAR = 1900
-let cachedRows = null
-let cacheCreatedAt = 0
-let cachedRangeKey = ''
-let activeQuery = null
-let activeRangeKey = ''
 
 function normalizeDataDate(value) {
   if (!value) return null
@@ -32,7 +28,7 @@ function normalizeDataDate(value) {
 
 function normalizeApiRow(row, index) {
   return {
-    id: index + 1,
+    id: `${row.CONTRATO || row.contrato || ''}-${row.LINEA ?? row.linea ?? index}-${row.TIPO_AFILIADO || row.tipo_afiliado || ''}`,
     fecha: normalizeDataDate(row.FECHA || row.fecha),
     sede: row.LOCALIDAD || row.sede || 'SIN LOCALIDAD',
     asesor: row.ASESOR || row.asesor || 'SIN NOMBRE',
@@ -82,32 +78,13 @@ async function queryPrevisionRows(range) {
   }
 }
 
+const loadCachedRange = createPersistentRangeCache({
+  namespace: `prevision-${process.env.HANA_SCHEMA || 'default'}`,
+  ttlMs: CACHE_TTL_MS,
+  dateField: 'fecha',
+  rowKey: (row) => row.id,
+})
+
 export async function fetchPrevisionRows(range = {}) {
-  const rangeKey = `${range.from || ''}:${range.to || ''}`
-  const cacheIsFresh = cachedRows && cachedRangeKey === rangeKey && Date.now() - cacheCreatedAt < CACHE_TTL_MS
-  if (cacheIsFresh) return cachedRows
-
-  if (activeQuery && activeRangeKey === rangeKey) return activeQuery
-
-  activeRangeKey = rangeKey
-  activeQuery = queryPrevisionRows(range)
-    .then((rows) => {
-      cachedRows = rows
-      cacheCreatedAt = Date.now()
-      cachedRangeKey = rangeKey
-      return rows
-    })
-    .catch((error) => {
-      if (cachedRows && cachedRangeKey === rangeKey) {
-        console.warn('[prevision] HANA no respondió; se conserva el último resultado válido.', error.message)
-        return cachedRows
-      }
-      throw error
-    })
-    .finally(() => {
-      activeQuery = null
-      activeRangeKey = ''
-    })
-
-  return activeQuery
+  return loadCachedRange(range, queryPrevisionRows)
 }

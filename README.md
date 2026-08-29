@@ -63,6 +63,12 @@ reenvía `/api/prevision`, `/api/homenajes` y `/api/retiros` al puente en vez de
 conexión directa a HANA. Se pueden indicar varias URL separadas por comas para
 usar la siguiente cuando una no responda.
 
+Previsión y Retiros guardan cada rango anual consultado en una caché local
+persistente para reutilizarlo después de reiniciar el servicio. Por defecto se
+almacena en `%LOCALAPPDATA%/CesincorDashboard/cache`; `DASHBOARD_CACHE_DIR`
+permite elegir otra ubicación y los tiempos se controlan con
+`PREVISION_CACHE_TTL_MS` y `RETIROS_CACHE_TTL_MS`.
+
 En Windows, después de configurar `.env`, inicia el puente con:
 
 ```powershell

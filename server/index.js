@@ -50,7 +50,7 @@ function requireGatewayToken(request, response, next) {
 
 app.get('/api/prevision', requireGatewayToken, async (request, response) => {
   try {
-    const range = { from: String(request.query.from || ''), to: String(request.query.to || '') }
+    const range = { from: String(request.query.from || ''), to: String(request.query.to || ''), refresh: String(request.query.refresh || '') }
     const data = hasUpstreamApi() ? await fetchUpstreamJson('/api/prevision', range) : { rows: await fetchPrevisionRows(range) }
     response.json(data)
   } catch (error) {
@@ -78,7 +78,7 @@ app.get('/api/homenajes', requireGatewayToken, async (request, response) => {
 
 app.get('/api/retiros', requireGatewayToken, async (request, response) => {
   try {
-    const range = { from: String(request.query.from || ''), to: String(request.query.to || '') }
+    const range = { from: String(request.query.from || ''), to: String(request.query.to || ''), refresh: String(request.query.refresh || '') }
     const data = hasUpstreamApi() ? await fetchUpstreamJson('/api/retiros', range) : { rows: await fetchRetiros(range) }
     response.json(data)
   } catch (error) {

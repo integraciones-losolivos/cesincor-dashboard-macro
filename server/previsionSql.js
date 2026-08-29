@@ -224,6 +224,7 @@ BASE AS (
 )
 SELECT
   "CONTRATO",
+  "LineId" AS "LINEA",
   "CODIGO_CONVENIO",
   "UEN",
   "UEN" AS "TIPO_PERSONA",

@@ -1,8 +1,19 @@
-import { CalendarDays, Filter, RotateCcw, Search } from 'lucide-react'
+import { CalendarDays, Database, Filter, RefreshCw, RotateCcw, Search } from 'lucide-react'
 import SelectField from '../SelectField.jsx'
 import { number } from '../../utils/dashboard.js'
 
-export default function PrevisionFilters({ filters, setFilters, options, resultCount, initialFilters, availableDateRange }) {
+export default function PrevisionFilters({
+  filters,
+  setFilters,
+  options,
+  resultCount,
+  initialFilters,
+  availableDateRange,
+  oldestLoadedYear,
+  isLoadingHistory,
+  onLoadPreviousYear,
+  onRefresh,
+}) {
   const updateFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }))
   const setPeriod = (period) => {
     if (!availableDateRange) return
@@ -71,9 +82,30 @@ export default function PrevisionFilters({ filters, setFilters, options, resultC
           </PeriodButton>
           <PeriodButton onClick={() => setPeriod('sixMonths')}>Últimos 6 meses</PeriodButton>
           <PeriodButton active={!filters.fechaInicial && !filters.fechaFinal} onClick={() => setPeriod('all')}>
-            Todo el año
+            Todo lo cargado
           </PeriodButton>
+          <button
+            type="button"
+            onClick={onLoadPreviousYear}
+            disabled={isLoadingHistory}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 transition hover:border-teal-600 hover:bg-teal-50 disabled:cursor-wait disabled:opacity-60"
+          >
+            <Database className="size-4" />
+            {isLoadingHistory ? 'Cargando historial…' : `Cargar ${oldestLoadedYear - 1}`}
+          </button>
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={isLoadingHistory}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-teal-700 bg-teal-50 px-4 py-2 text-sm font-black text-teal-800 transition hover:bg-teal-100 disabled:cursor-wait disabled:opacity-60"
+          >
+            <RefreshCw className={`size-4 ${isLoadingHistory ? 'animate-spin' : ''}`} />
+            Actualizar datos
+          </button>
         </div>
+        <p className="mt-3 text-xs font-semibold text-slate-500">
+          Historial disponible en memoria desde {oldestLoadedYear}. Cada año se descarga por separado y queda reutilizable en caché.
+        </p>
       </div>
 
       <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-6">
