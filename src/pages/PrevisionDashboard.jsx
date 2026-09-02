@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   BadgeDollarSign,
   Building2,
@@ -106,7 +106,18 @@ const reportViews = [
 ]
 
 const CONNECTION_CHECK_MS = 2 * 60 * 1000
-const RESUME_REFRESH_MS = 4 * 60 * 1000
+const RESUME_REFRESH_MS = 30 * 60 * 1000
+const DATA_YEAR = new Date().getFullYear()
+
+function yearRange(year) {
+  return { from: `${year}-01-01`, to: `${year}-12-31` }
+}
+
+function mergeRows(current, incoming) {
+  const rows = new Map(current.map((row) => [row.id, row]))
+  incoming.forEach((row) => rows.set(row.id, row))
+  return Array.from(rows.values())
+}
 
 export default function PrevisionDashboard({ areaName = 'Prevision' }) {
   const [filters, setFilters] = useState(initialFilters)
@@ -115,22 +126,70 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [loadAttempt, setLoadAttempt] = useState(0)
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+  const [isHistoryReady, setIsHistoryReady] = useState(false)
+  const [visitedViews, setVisitedViews] = useState(() => new Set(['activos']))
   const hasLoadedData = useRef(false)
   const lastLoadedAt = useRef(0)
+  const activeRequests = useRef(new Map())
+
+  const loadCurrentYear = useCallback(async ({ refresh = false } = {}) => {
+    const requestKey = `current:${refresh ? 'refresh' : 'load'}`
+    if (activeRequests.current.has(requestKey)) return activeRequests.current.get(requestKey)
+
+    const request = (async () => {
+      try {
+        const rows = await fetchPrevisionRows({ ...yearRange(DATA_YEAR), refresh: refresh ? 'incremental' : '' })
+        setPrevisionRows((current) => mergeRows(current, rows))
+        lastLoadedAt.current = Date.now()
+        return rows
+      } finally {
+        activeRequests.current.delete(requestKey)
+      }
+    })()
+
+    activeRequests.current.set(requestKey, request)
+    return request
+  }, [])
+
+  const loadHistory = useCallback(async ({ refresh = false } = {}) => {
+    if (isHistoryReady && !refresh) return
+    const requestKey = `history:${refresh ? 'refresh' : 'load'}`
+    if (activeRequests.current.has(requestKey)) return activeRequests.current.get(requestKey)
+
+    const request = (async () => {
+      setIsLoadingHistory(true)
+      try {
+        const rows = await fetchPrevisionRows({ refresh: refresh ? 'incremental' : '' })
+        setPrevisionRows((current) => {
+          if (refresh) return rows
+          const currentYearRows = current.filter((row) => String(row.fecha || '').startsWith(`${DATA_YEAR}-`))
+          const historicalRows = rows.filter((row) => !String(row.fecha || '').startsWith(`${DATA_YEAR}-`))
+          return mergeRows(historicalRows, currentYearRows)
+        })
+        setIsHistoryReady(true)
+        lastLoadedAt.current = Date.now()
+        return rows
+      } finally {
+        activeRequests.current.delete(requestKey)
+        setIsLoadingHistory(false)
+      }
+    })()
+
+    activeRequests.current.set(requestKey, request)
+    return request
+  }, [isHistoryReady])
 
   useEffect(() => {
     let isMounted = true
-    let requestInProgress = false
 
     async function loadRows({ background = false } = {}) {
-      if (requestInProgress || !navigator.onLine) return
-      requestInProgress = true
+      if (!navigator.onLine) return
       try {
         if (!background && !hasLoadedData.current) setIsLoading(true)
         if (!background) setLoadError('')
-        const rows = await fetchPrevisionRows()
+        const rows = await loadCurrentYear({ refresh: background })
         if (isMounted) {
-          setPrevisionRows(rows)
           if (!hasLoadedData.current) {
             const dateRange = getAvailableDateRange(rows)
             if (dateRange) {
@@ -144,11 +203,13 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
           hasLoadedData.current = true
           lastLoadedAt.current = Date.now()
           setLoadError('')
+          loadHistory().catch((error) => {
+            if (isMounted) setLoadError(`No fue posible preparar todo el historial. ${error.message}`)
+          })
         }
       } catch (error) {
         if (isMounted && !hasLoadedData.current) setLoadError(error.message)
       } finally {
-        requestInProgress = false
         if (isMounted) setIsLoading(false)
       }
     }
@@ -173,7 +234,21 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
       window.removeEventListener('online', refreshAfterReconnect)
       document.removeEventListener('visibilitychange', refreshAfterResume)
     }
-  }, [loadAttempt])
+  }, [loadAttempt, loadCurrentYear, loadHistory])
+
+  const refreshData = async () => {
+    try {
+      setLoadError('')
+      await loadHistory({ refresh: true })
+    } catch (error) {
+      setLoadError(error.message)
+    }
+  }
+
+  const selectView = (view) => {
+    setActiveView(view)
+    setVisitedViews((current) => new Set(current).add(view))
+  }
 
   const options = useMemo(
     () => ({
@@ -227,9 +302,15 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
       </section>
 
       <section className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-        {isLoading ? (
+        <ReportTabs activeView={activeView} setActiveView={selectView} />
+        {visitedViews.has('retiros') && (
+          <div hidden={activeView !== 'retiros'}>
+            <RetirosDashboard embedded active={activeView === 'retiros'} />
+          </div>
+        )}
+        {activeView !== 'retiros' && (isLoading ? (
           <PrevisionLoadingState />
-        ) : loadError ? (
+        ) : loadError && !previsionRows.length ? (
           <section className="card-shadow rounded-[2rem] border border-amber-200 bg-white px-6 py-10 text-center sm:px-10">
             <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-amber-50 text-amber-700 ring-1 ring-amber-200">
               <RefreshCw className="size-6" strokeWidth={2.5} />
@@ -248,28 +329,36 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
           </section>
         ) : (
           <>
-            <PrevisionFilters
+            {loadError && (
+              <div className="flex items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">
+                <span>{loadError} Se conservan los datos que ya estaban cargados.</span>
+                <button type="button" onClick={() => setLoadError('')} className="shrink-0 underline">Cerrar</button>
+              </div>
+            )}
+            {activeView !== 'retiros' && <PrevisionFilters
               filters={filters}
               setFilters={setFilters}
               options={options}
               resultCount={filteredRows.length}
               initialFilters={initialFilters}
               availableDateRange={availableDateRange}
-            />
+              isLoadingHistory={isLoadingHistory}
+              isHistoryReady={isHistoryReady}
+              onRefresh={refreshData}
+            />}
 
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {activeView !== 'retiros' && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <KpiCard title="Contratos activos" value={number(kpis.contratosActivos)} helper={`Promedio por contrato: ${money(kpis.valorPromedioContrato)}.`} icon={<ClipboardList className="size-6" strokeWidth={2.4} />} accent="blue" />
               <KpiCard title="Personas activas" value={number(kpis.personasActivas)} helper={`${number(kpis.totalTitulares)} titulares y ${number(kpis.totalBeneficiarios)} beneficiarios.`} icon={<UsersRound className="size-6" strokeWidth={2.4} />} accent="emerald" />
               <KpiCard title="Valor mensual activo" value={money(kpis.ingresoMensual)} helper={`Proyeccion anual: ${money(kpis.ingresoAnualizado)}.`} icon={<BadgeDollarSign className="size-6" strokeWidth={2.4} />} accent="violet" />
               <KpiCard title="Mascotas activas" value={number(kpis.totalMascotas)} helper={`${number(kpis.personasRetiradas)} personas retiradas dentro de contratos activos.`} icon={<PawPrint className="size-6" strokeWidth={2.4} />} accent="orange" />
-            </div>
+            </div>}
 
-            {!filteredRows.length ? (
+            {activeView !== 'retiros' && (!filteredRows.length ? (
             <EmptyState />
           ) : (
             <>
               <ExecutiveBalance kpis={kpis} />
-              <ReportTabs activeView={activeView} setActiveView={setActiveView} />
               {activeView === 'activos' && (
                 <ActivePortfolioCharts
                   monthly={monthly}
@@ -295,11 +384,10 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
                 />
               )}
               {activeView === 'mascotas' && <PetsDashboard petSummary={petSummary} />}
-              {activeView === 'retiros' && <RetirosDashboard embedded />}
             </>
-            )}
+            ))}
           </>
-        )}
+        ))}
       </section>
     </main>
   )

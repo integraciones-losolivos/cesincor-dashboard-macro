@@ -59,10 +59,17 @@ const modules = [
 
 export default function App() {
   const [activeModule, setActiveModule] = useState('prevision')
+  const [visitedModules, setVisitedModules] = useState(() => new Set(['prevision']))
   const selectedModule = useMemo(
     () => modules.find((module) => module.id === activeModule) || modules[0],
     [activeModule],
   )
+  const activateModule = (moduleId) => {
+    setActiveModule(moduleId)
+    if (moduleId === 'prevision' || moduleId === 'homenajes') {
+      setVisitedModules((current) => new Set(current).add(moduleId))
+    }
+  }
 
   return (
     <div>
@@ -87,7 +94,7 @@ export default function App() {
                 <button
                   key={module.id}
                   type="button"
-                  onClick={() => setActiveModule(module.id)}
+                  onClick={() => activateModule(module.id)}
                   className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-black transition ${
                     isActive
                       ? 'bg-gradient-to-r from-emerald-800 to-green-600 text-white shadow-lg shadow-emerald-700/20'
@@ -105,15 +112,21 @@ export default function App() {
       </nav>
 
       <Suspense fallback={<ModuleLoadingState />}>
-        {activeModule === 'homenajes' ? (
-          <HomenajesDashboard areaName={selectedModule.areaName} />
-        ) : activeModule === 'prevision' ? (
-          <PrevisionDashboard areaName={selectedModule.areaName} />
-        ) : (
+        {visitedModules.has('prevision') && (
+          <div hidden={activeModule !== 'prevision'}>
+            <PrevisionDashboard areaName="Previsión Exequial" />
+          </div>
+        )}
+        {visitedModules.has('homenajes') && (
+          <div hidden={activeModule !== 'homenajes'}>
+            <HomenajesDashboard areaName="Homenajes" />
+          </div>
+        )}
+        {activeModule !== 'prevision' && activeModule !== 'homenajes' && (
           <ModulePlaceholder
             module={selectedModule}
             modules={modules}
-            setActiveModule={setActiveModule}
+            setActiveModule={activateModule}
           />
         )}
       </Suspense>

@@ -1,8 +1,18 @@
-import { CalendarDays, Filter, RotateCcw, Search } from 'lucide-react'
+import { CalendarDays, Filter, RefreshCw, RotateCcw, Search } from 'lucide-react'
 import SelectField from '../SelectField.jsx'
 import { number } from '../../utils/dashboard.js'
 
-export default function PrevisionFilters({ filters, setFilters, options, resultCount, initialFilters, availableDateRange }) {
+export default function PrevisionFilters({
+  filters,
+  setFilters,
+  options,
+  resultCount,
+  initialFilters,
+  availableDateRange,
+  isLoadingHistory,
+  isHistoryReady,
+  onRefresh,
+}) {
   const updateFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }))
   const setPeriod = (period) => {
     if (!availableDateRange) return
@@ -71,9 +81,25 @@ export default function PrevisionFilters({ filters, setFilters, options, resultC
           </PeriodButton>
           <PeriodButton onClick={() => setPeriod('sixMonths')}>Últimos 6 meses</PeriodButton>
           <PeriodButton active={!filters.fechaInicial && !filters.fechaFinal} onClick={() => setPeriod('all')}>
-            Todo el histórico
+            Todo el historial
           </PeriodButton>
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={isLoadingHistory}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-teal-700 bg-teal-50 px-4 py-2 text-sm font-black text-teal-800 transition hover:bg-teal-100 disabled:cursor-wait disabled:opacity-60"
+          >
+            <RefreshCw className={`size-4 ${isLoadingHistory ? 'animate-spin' : ''}`} />
+            Actualizar datos
+          </button>
         </div>
+        <p className="mt-3 text-xs font-semibold text-slate-500">
+          {isLoadingHistory
+            ? 'Preparando el historial completo en segundo plano; puedes seguir usando el tablero.'
+            : isHistoryReady
+              ? 'Historial completo disponible en caché. Los filtros de fecha se aplican sin cargas manuales.'
+              : 'El historial se prepara automáticamente y queda disponible en caché.'}
+        </p>
       </div>
 
       <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-6">
