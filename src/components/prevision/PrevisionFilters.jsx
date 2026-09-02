@@ -1,4 +1,4 @@
-import { CalendarDays, Database, Filter, RefreshCw, RotateCcw, Search } from 'lucide-react'
+import { CalendarDays, Filter, RefreshCw, RotateCcw, Search } from 'lucide-react'
 import SelectField from '../SelectField.jsx'
 import { number } from '../../utils/dashboard.js'
 
@@ -9,9 +9,8 @@ export default function PrevisionFilters({
   resultCount,
   initialFilters,
   availableDateRange,
-  oldestLoadedYear,
   isLoadingHistory,
-  onLoadPreviousYear,
+  isHistoryReady,
   onRefresh,
 }) {
   const updateFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }))
@@ -82,17 +81,8 @@ export default function PrevisionFilters({
           </PeriodButton>
           <PeriodButton onClick={() => setPeriod('sixMonths')}>Últimos 6 meses</PeriodButton>
           <PeriodButton active={!filters.fechaInicial && !filters.fechaFinal} onClick={() => setPeriod('all')}>
-            Todo lo cargado
+            Todo el historial
           </PeriodButton>
-          <button
-            type="button"
-            onClick={onLoadPreviousYear}
-            disabled={isLoadingHistory}
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 transition hover:border-teal-600 hover:bg-teal-50 disabled:cursor-wait disabled:opacity-60"
-          >
-            <Database className="size-4" />
-            {isLoadingHistory ? 'Cargando historial…' : `Cargar ${oldestLoadedYear - 1}`}
-          </button>
           <button
             type="button"
             onClick={onRefresh}
@@ -104,7 +94,11 @@ export default function PrevisionFilters({
           </button>
         </div>
         <p className="mt-3 text-xs font-semibold text-slate-500">
-          Historial disponible en memoria desde {oldestLoadedYear}. Cada año se descarga por separado y queda reutilizable en caché.
+          {isLoadingHistory
+            ? 'Preparando el historial completo en segundo plano; puedes seguir usando el tablero.'
+            : isHistoryReady
+              ? 'Historial completo disponible en caché. Los filtros de fecha se aplican sin cargas manuales.'
+              : 'El historial se prepara automáticamente y queda disponible en caché.'}
         </p>
       </div>
 

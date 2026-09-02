@@ -48,38 +48,19 @@ frontend compilado desde `dist` y también los endpoints bajo `/api`.
 Configura en Hostinger las variables `HANA_HOST`, `HANA_PORT`, `HANA_USER`,
 `HANA_PASSWORD`, `HANA_SCHEMA`, `HANA_ENCRYPT` y
 `HANA_SSL_VALIDATE_CERTIFICATE`. Hostinger asigna la variable `PORT`
-automáticamente.
+automáticamente. La API siempre abre la conexión a SAP HANA directamente desde
+el servidor de Hostinger; no utiliza túneles ni servicios ejecutados en un PC.
 
-## Puente hacia HANA desde la oficina
+## Caché de historial
 
-Cuando HANA solo acepta conexiones originadas en la red de la oficina, una
-instancia local de esta API puede publicarse mediante un túnel HTTPS. En el PC
-de la oficina configura `GATEWAY_SHARED_SECRET` junto con las variables HANA y
-ejecuta `npm start`. No configures `UPSTREAM_API_URLS` en el PC.
-
-En Hostinger configura la URL pública del túnel en `UPSTREAM_API_URLS` y la
-misma clave en `UPSTREAM_API_TOKEN`. Cuando estas variables existen, Express
-reenvía `/api/prevision`, `/api/homenajes` y `/api/retiros` al puente en vez de intentar una
-conexión directa a HANA. Se pueden indicar varias URL separadas por comas para
-usar la siguiente cuando una no responda.
-
-Previsión y Retiros guardan cada rango anual consultado en una caché local
-persistente para reutilizarlo después de reiniciar el servicio. Por defecto se
-almacena en `%LOCALAPPDATA%/CesincorDashboard/cache`; `DASHBOARD_CACHE_DIR`
-permite elegir otra ubicación y los tiempos se controlan con
+Previsión y Retiros cargan primero el año actual para mostrar el tablero rápido
+y preparan el historial completo en segundo plano. Los resultados se guardan
+en una caché local persistente para reutilizarlos después de reiniciar el
+servicio. Una entrada vencida se entrega inmediatamente y se actualiza sin
+bloquear la pantalla. Por defecto la caché se almacena en
+`%LOCALAPPDATA%/CesincorDashboard/cache`; `DASHBOARD_CACHE_DIR` permite elegir
+otra ubicación y los tiempos de actualización se controlan con
 `PREVISION_CACHE_TTL_MS` y `RETIROS_CACHE_TTL_MS`.
-
-En Windows, después de configurar `.env`, inicia el puente con:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/start-office-bridge.ps1
-```
-
-El script usa la URL estable `https://acid-dose-ultra.ngrok-free.dev` por
-defecto; se puede cambiar con `NGROK_PUBLIC_URL`. Antes de abrir un túnel,
-revisa el inspector local de ngrok y reutiliza el túnel ya activo para no
-consumir más endpoints o sesiones del plan. Mantén abierta únicamente la
-consola que creó el túnel.
 
 Los módulos funcionales se incorporan de forma incremental mediante ramas y
 pull requests independientes.

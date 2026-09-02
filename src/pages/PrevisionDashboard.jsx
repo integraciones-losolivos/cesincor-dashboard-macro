@@ -119,14 +119,6 @@ function mergeRows(current, incoming) {
   return Array.from(rows.values())
 }
 
-function requestedYears(filters) {
-  if (!filters.fechaInicial || !filters.fechaFinal) return []
-  const fromYear = Number(filters.fechaInicial.slice(0, 4))
-  const toYear = Number(filters.fechaFinal.slice(0, 4))
-  if (!Number.isInteger(fromYear) || !Number.isInteger(toYear) || fromYear > toYear) return []
-  return Array.from({ length: toYear - fromYear + 1 }, (_, index) => fromYear + index)
-}
-
 export default function PrevisionDashboard({ areaName = 'Prevision' }) {
   const [filters, setFilters] = useState(initialFilters)
   const [activeView, setActiveView] = useState('activos')
@@ -134,34 +126,59 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [loadAttempt, setLoadAttempt] = useState(0)
-  const [loadedYears, setLoadedYears] = useState(() => new Set())
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+  const [isHistoryReady, setIsHistoryReady] = useState(false)
   const [visitedViews, setVisitedViews] = useState(() => new Set(['activos']))
   const hasLoadedData = useRef(false)
   const lastLoadedAt = useRef(0)
   const activeRequests = useRef(new Map())
 
-  const loadYear = useCallback(async (year, { refresh = false, background = false } = {}) => {
-    const requestKey = `${year}:${refresh ? 'refresh' : 'load'}`
+  const loadCurrentYear = useCallback(async ({ refresh = false } = {}) => {
+    const requestKey = `current:${refresh ? 'refresh' : 'load'}`
     if (activeRequests.current.has(requestKey)) return activeRequests.current.get(requestKey)
 
     const request = (async () => {
-      if (!background) setIsLoadingHistory(true)
       try {
-        const rows = await fetchPrevisionRows({ ...yearRange(year), refresh: refresh ? 'incremental' : '' })
+        const rows = await fetchPrevisionRows({ ...yearRange(DATA_YEAR), refresh: refresh ? 'incremental' : '' })
         setPrevisionRows((current) => mergeRows(current, rows))
-        setLoadedYears((current) => new Set(current).add(year))
         lastLoadedAt.current = Date.now()
         return rows
       } finally {
         activeRequests.current.delete(requestKey)
-        if (!background) setIsLoadingHistory(false)
       }
     })()
 
     activeRequests.current.set(requestKey, request)
     return request
   }, [])
+
+  const loadHistory = useCallback(async ({ refresh = false } = {}) => {
+    if (isHistoryReady && !refresh) return
+    const requestKey = `history:${refresh ? 'refresh' : 'load'}`
+    if (activeRequests.current.has(requestKey)) return activeRequests.current.get(requestKey)
+
+    const request = (async () => {
+      setIsLoadingHistory(true)
+      try {
+        const rows = await fetchPrevisionRows({ refresh: refresh ? 'incremental' : '' })
+        setPrevisionRows((current) => {
+          if (refresh) return rows
+          const currentYearRows = current.filter((row) => String(row.fecha || '').startsWith(`${DATA_YEAR}-`))
+          const historicalRows = rows.filter((row) => !String(row.fecha || '').startsWith(`${DATA_YEAR}-`))
+          return mergeRows(historicalRows, currentYearRows)
+        })
+        setIsHistoryReady(true)
+        lastLoadedAt.current = Date.now()
+        return rows
+      } finally {
+        activeRequests.current.delete(requestKey)
+        setIsLoadingHistory(false)
+      }
+    })()
+
+    activeRequests.current.set(requestKey, request)
+    return request
+  }, [isHistoryReady])
 
   useEffect(() => {
     let isMounted = true
@@ -171,7 +188,7 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
       try {
         if (!background && !hasLoadedData.current) setIsLoading(true)
         if (!background) setLoadError('')
-        const rows = await loadYear(DATA_YEAR, { refresh: background, background })
+        const rows = await loadCurrentYear({ refresh: background })
         if (isMounted) {
           if (!hasLoadedData.current) {
             const dateRange = getAvailableDateRange(rows)
@@ -186,6 +203,9 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
           hasLoadedData.current = true
           lastLoadedAt.current = Date.now()
           setLoadError('')
+          loadHistory().catch((error) => {
+            if (isMounted) setLoadError(`No fue posible preparar todo el historial. ${error.message}`)
+          })
         }
       } catch (error) {
         if (isMounted && !hasLoadedData.current) setLoadError(error.message)
@@ -214,43 +234,12 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
       window.removeEventListener('online', refreshAfterReconnect)
       document.removeEventListener('visibilitychange', refreshAfterResume)
     }
-  }, [loadAttempt, loadYear])
+  }, [loadAttempt, loadCurrentYear, loadHistory])
 
-  useEffect(() => {
-    const missingYears = requestedYears(filters).filter((year) => !loadedYears.has(year))
-    if (!missingYears.length || !navigator.onLine) return
-    let cancelled = false
-    ;(async () => {
-      try {
-        for (const year of missingYears) {
-          if (cancelled) return
-          await loadYear(year)
-        }
-      } catch (error) {
-        if (!cancelled) setLoadError(error.message)
-      }
-    })()
-    return () => { cancelled = true }
-  }, [filters.fechaInicial, filters.fechaFinal, loadedYears, loadYear])
-
-  const oldestLoadedYear = loadedYears.size ? Math.min(...loadedYears) : DATA_YEAR
-  const loadPreviousYear = async () => {
-    const year = oldestLoadedYear - 1
+  const refreshData = async () => {
     try {
       setLoadError('')
-      await loadYear(year)
-      setFilters((current) => ({ ...current, fechaInicial: `${year}-01-01`, fechaFinal: current.fechaFinal || `${DATA_YEAR}-12-31` }))
-    } catch (error) {
-      setLoadError(error.message)
-    }
-  }
-
-  const refreshVisibleYears = async () => {
-    const years = requestedYears(filters)
-    const targets = years.length ? years : [DATA_YEAR]
-    try {
-      setLoadError('')
-      for (const year of targets) await loadYear(year, { refresh: true })
+      await loadHistory({ refresh: true })
     } catch (error) {
       setLoadError(error.message)
     }
@@ -353,10 +342,9 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
               resultCount={filteredRows.length}
               initialFilters={initialFilters}
               availableDateRange={availableDateRange}
-              oldestLoadedYear={oldestLoadedYear}
               isLoadingHistory={isLoadingHistory}
-              onLoadPreviousYear={loadPreviousYear}
-              onRefresh={refreshVisibleYears}
+              isHistoryReady={isHistoryReady}
+              onRefresh={refreshData}
             />}
 
             {activeView !== 'retiros' && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

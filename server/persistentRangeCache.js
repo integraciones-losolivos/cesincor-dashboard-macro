@@ -56,11 +56,7 @@ export function createPersistentRangeCache({ namespace, ttlMs, dateField, rowKey
       if (entry) memory.set(key, entry)
     }
 
-    const isFresh = entry && Date.now() - Number(entry.createdAt || 0) < ttlMs
-    if (entry && !refreshMode && isFresh) return entry.rows
-    if (activeQueries.has(key)) return activeQueries.get(key)
-
-    const query = (async () => {
+    const refreshEntry = () => (async () => {
       try {
         let queryRange = { from: range.from || '', to: range.to || '' }
         const shouldUpdateIncrementally = entry && refreshMode !== 'full'
@@ -88,6 +84,17 @@ export function createPersistentRangeCache({ namespace, ttlMs, dateField, rowKey
       }
     })()
 
+    const isFresh = entry && Date.now() - Number(entry.createdAt || 0) < ttlMs
+    if (entry && !refreshMode) {
+      if (!isFresh && !activeQueries.has(key)) {
+        const backgroundRefresh = refreshEntry()
+        activeQueries.set(key, backgroundRefresh)
+      }
+      return entry.rows
+    }
+    if (activeQueries.has(key)) return activeQueries.get(key)
+
+    const query = refreshEntry()
     activeQueries.set(key, query)
     return query
   }

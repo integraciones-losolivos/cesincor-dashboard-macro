@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Line, Pie, PieChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { LogOut, UsersRound, FileWarning, CalendarClock, Database, RefreshCw } from 'lucide-react'
+import { LogOut, UsersRound, FileWarning, CalendarClock, RefreshCw } from 'lucide-react'
 import ChartCard from '../components/ChartCard.jsx'
 import KpiCard from '../components/KpiCard.jsx'
 import CustomTooltip from '../components/CustomTooltip.jsx'
@@ -25,20 +25,46 @@ export default function RetirosDashboard({ areaName = 'Retiros', embedded = fals
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [filters, setFilters] = useState({ search: '', fechaInicial: `${DATA_YEAR}-01-01`, fechaFinal: `${DATA_YEAR}-12-31`, sede: 'TODOS', tipo: 'TODOS', entidad: 'TODOS' })
-  const [loadedYears, setLoadedYears] = useState(() => new Set())
   const [loadingHistory, setLoadingHistory] = useState(false)
+  const [historyReady, setHistoryReady] = useState(false)
   const activeRequests = useRef(new Map())
+  const currentYearReady = useRef(false)
 
-  const loadYear = useCallback(async (year, refresh = false) => {
-    const key = `${year}:${refresh}`
+  const loadCurrentYear = useCallback(async (refresh = false) => {
+    const key = `current:${refresh}`
+    if (activeRequests.current.has(key)) return activeRequests.current.get(key)
+    const request = (async () => {
+      try {
+        const incoming = await fetchRetiros({ ...yearRange(DATA_YEAR), refresh: refresh ? 'incremental' : '' })
+        setRows((current) => mergeRows(current, incoming))
+        currentYearReady.current = true
+        setError('')
+        return incoming
+      } finally {
+        activeRequests.current.delete(key)
+      }
+    })()
+    activeRequests.current.set(key, request)
+    return request
+  }, [])
+
+  const loadHistory = useCallback(async (refresh = false) => {
+    if (historyReady && !refresh) return
+    const key = `history:${refresh}`
     if (activeRequests.current.has(key)) return activeRequests.current.get(key)
     const request = (async () => {
       setLoadingHistory(true)
       try {
-        const incoming = await fetchRetiros({ ...yearRange(year), refresh: refresh ? 'incremental' : '' })
-        setRows((current) => mergeRows(current, incoming))
-        setLoadedYears((current) => new Set(current).add(year))
+        const incoming = await fetchRetiros({ refresh: refresh ? 'incremental' : '' })
+        setRows((current) => {
+          if (refresh) return incoming
+          const currentYearRows = current.filter((row) => String(row.fecha || '').startsWith(`${DATA_YEAR}-`))
+          const historicalRows = incoming.filter((row) => !String(row.fecha || '').startsWith(`${DATA_YEAR}-`))
+          return mergeRows(historicalRows, currentYearRows)
+        })
+        setHistoryReady(true)
         setError('')
+        return incoming
       } finally {
         activeRequests.current.delete(key)
         setLoadingHistory(false)
@@ -46,48 +72,32 @@ export default function RetirosDashboard({ areaName = 'Retiros', embedded = fals
     })()
     activeRequests.current.set(key, request)
     return request
-  }, [])
+  }, [historyReady])
 
   useEffect(() => {
-    if (!active || loadedYears.has(DATA_YEAR)) return
-    loadYear(DATA_YEAR).catch((e) => setError(e.message)).finally(() => setLoading(false))
-  }, [active, loadYear, loadedYears])
-
-  useEffect(() => {
-    if (!active || !filters.fechaInicial || !filters.fechaFinal) return
-    const fromYear = Number(filters.fechaInicial.slice(0, 4))
-    const toYear = Number(filters.fechaFinal.slice(0, 4))
-    if (!Number.isInteger(fromYear) || !Number.isInteger(toYear) || fromYear > toYear) return
-    const missing = Array.from({ length: toYear - fromYear + 1 }, (_, index) => fromYear + index).filter((year) => !loadedYears.has(year))
-    if (!missing.length) return
+    if (!active) return
     let cancelled = false
     ;(async () => {
       try {
-        for (const year of missing) {
-          if (cancelled) return
-          await loadYear(year)
+        if (!currentYearReady.current) await loadCurrentYear()
+        if (!cancelled) {
+          setLoading(false)
+          loadHistory().catch((e) => {
+            if (!cancelled) setError(`No fue posible preparar todo el historial. ${e.message}`)
+          })
         }
-      } catch (e) { if (!cancelled) setError(e.message) }
+      } catch (e) {
+        if (!cancelled) setError(e.message)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     })()
     return () => { cancelled = true }
-  }, [active, filters.fechaInicial, filters.fechaFinal, loadYear, loadedYears])
+  }, [active, loadCurrentYear, loadHistory])
 
-  const oldestLoadedYear = loadedYears.size ? Math.min(...loadedYears) : DATA_YEAR
-  const loadPreviousYear = async () => {
-    const year = oldestLoadedYear - 1
-    try {
-      await loadYear(year)
-      setFilters((current) => ({ ...current, fechaInicial: `${year}-01-01` }))
-    } catch (e) { setError(e.message) }
-  }
   const refreshData = async () => {
-    const fromYear = Number(filters.fechaInicial?.slice(0, 4))
-    const toYear = Number(filters.fechaFinal?.slice(0, 4))
-    const targets = Number.isInteger(fromYear) && Number.isInteger(toYear) && fromYear <= toYear
-      ? Array.from({ length: toYear - fromYear + 1 }, (_, index) => fromYear + index)
-      : [DATA_YEAR]
     try {
-      for (const year of targets) await loadYear(year, true)
+      await loadHistory(true)
     } catch (e) { setError(e.message) }
   }
   const filtered = useMemo(() => rows.filter((row) => {
@@ -115,12 +125,12 @@ export default function RetirosDashboard({ areaName = 'Retiros', embedded = fals
         <div className="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-3">
           <DateInput label="Desde" value={filters.fechaInicial} onChange={(fechaInicial) => setFilters({ ...filters, fechaInicial })} />
           <DateInput label="Hasta" value={filters.fechaFinal} onChange={(fechaFinal) => setFilters({ ...filters, fechaFinal })} />
-          <button type="button" onClick={loadPreviousYear} disabled={loadingHistory} className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-300 px-4 text-sm font-black text-slate-700 disabled:opacity-60"><Database className="size-4" />{loadingHistory ? 'Cargando…' : `Cargar ${oldestLoadedYear - 1}`}</button>
           <button type="button" onClick={refreshData} disabled={loadingHistory} className="inline-flex h-11 items-center gap-2 rounded-xl bg-rose-700 px-4 text-sm font-black text-white disabled:opacity-60"><RefreshCw className={`size-4 ${loadingHistory ? 'animate-spin' : ''}`} />Actualizar</button>
-          <span className="pb-3 text-xs font-bold text-slate-500">Historial cargado desde {oldestLoadedYear}</span>
+          <span className="pb-3 text-xs font-bold text-slate-500">{loadingHistory ? 'Preparando historial en segundo plano…' : historyReady ? 'Historial completo disponible en caché' : 'El historial se cargará automáticamente'}</span>
         </div>
       </div>
-      {loading ? <div className="grid min-h-72 place-items-center rounded-3xl bg-white font-black text-slate-600">Consultando retiros…</div> : error ? <div className="rounded-3xl bg-white p-8 text-center text-rose-700">{error}</div> : !filtered.length ? <EmptyState /> : <>
+      {error && rows.length ? <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">{error} Se conservan los datos disponibles en caché.</div> : null}
+      {loading ? <div className="grid min-h-72 place-items-center rounded-3xl bg-white font-black text-slate-600">Consultando retiros…</div> : error && !rows.length ? <div className="rounded-3xl bg-white p-8 text-center text-rose-700">{error}</div> : !filtered.length ? <EmptyState /> : <>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><KpiCard title="Retiros registrados" value={number(filtered.length)} helper="Personas retiradas en el periodo consultado." icon={<LogOut className="size-6" />} accent="rose" /><KpiCard title="Contratos impactados" value={number(contracts)} helper="Contratos con al menos un retiro." icon={<FileWarning className="size-6" />} accent="orange" /><KpiCard title="Retiros de titular" value={number(titular)} helper="Cancelaciones del asegurado principal." icon={<UsersRound className="size-6" />} accent="violet" /><KpiCard title="Vigencia promedio" value={`${number(avgMonths)} meses`} helper="Tiempo entre ingreso y retiro." icon={<CalendarClock className="size-6" />} accent="blue" /></div>
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]"><ChartCard title="Tendencia de retiros" subtitle="Retiros registrados por mes." accent="rose"><div className="h-80"><ResponsiveContainer width="100%" height="100%"><BarChart data={byMonth}><CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" vertical={false} /><XAxis dataKey="name" /><YAxis allowDecimals={false} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="cantidad" name="Retiros" fill="#e11d48" radius={[10, 10, 0, 0]} /></BarChart></ResponsiveContainer></div></ChartCard><ChartCard title="Composición del retiro" subtitle="Titulares, adicionales y mascotas." accent="orange"><div className="h-80"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={byType} dataKey="cantidad" nameKey="name" innerRadius={68} outerRadius={106} paddingAngle={4}>{byType.map((item, i) => <Cell key={item.name} fill={colors[i % colors.length]} />)}</Pie><Tooltip content={<CustomTooltip />} /></PieChart></ResponsiveContainer></div></ChartCard></div>
         <div className="grid gap-6 xl:grid-cols-2"><ChartCard title="Retiros por sede" subtitle="Volumen de personas y contratos afectados." accent="rose"><Bars data={bySede} /></ChartCard><ChartCard title="Planes con más retiros" subtitle="Concentración de retiros por plan exequial." accent="violet"><Bars data={byPlan} /></ChartCard></div>
