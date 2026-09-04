@@ -30,7 +30,7 @@ import ExecutiveBalance from '../components/prevision/ExecutiveBalance.jsx'
 import KpiCard from '../components/KpiCard.jsx'
 import PrevisionFilters from '../components/prevision/PrevisionFilters.jsx'
 import RetirosDashboard from './RetirosDashboard.jsx'
-import { fetchPrevisionRows } from '../services/previsionApi.js'
+import { fetchPrevisionBillingSummary, fetchPrevisionRows } from '../services/previsionApi.js'
 import { checkApiHealth } from '../services/http.js'
 import { getUniqueOptions, money, number, percent, shortMoney } from '../utils/dashboard.js'
 import {
@@ -128,6 +128,10 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [isHistoryReady, setIsHistoryReady] = useState(false)
+  const [billingSummary, setBillingSummary] = useState(null)
+  const [billingError, setBillingError] = useState('')
+  const [isBillingLoading, setIsBillingLoading] = useState(false)
+  const [billingRefresh, setBillingRefresh] = useState(0)
   const [visitedViews, setVisitedViews] = useState(() => new Set(['activos']))
   const hasLoadedData = useRef(false)
   const lastLoadedAt = useRef(0)
@@ -236,10 +240,34 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
     }
   }, [loadAttempt, loadCurrentYear, loadHistory])
 
+  useEffect(() => {
+    if (isLoading) return undefined
+
+    let isCurrent = true
+    setIsBillingLoading(true)
+    setBillingError('')
+
+    fetchPrevisionBillingSummary({ from: filters.fechaInicial, to: filters.fechaFinal })
+      .then((summary) => {
+        if (isCurrent) setBillingSummary(summary)
+      })
+      .catch((error) => {
+        if (isCurrent) setBillingError(error.message)
+      })
+      .finally(() => {
+        if (isCurrent) setIsBillingLoading(false)
+      })
+
+    return () => {
+      isCurrent = false
+    }
+  }, [billingRefresh, filters.fechaFinal, filters.fechaInicial, isLoading])
+
   const refreshData = async () => {
     try {
       setLoadError('')
       await loadHistory({ refresh: true })
+      setBillingRefresh((current) => current + 1)
     } catch (error) {
       setLoadError(error.message)
     }
@@ -350,7 +378,19 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
             {activeView !== 'retiros' && <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <KpiCard title="Contratos activos" value={number(kpis.contratosActivos)} helper={`Promedio por contrato: ${money(kpis.valorPromedioContrato)}.`} icon={<ClipboardList className="size-6" strokeWidth={2.4} />} accent="blue" />
               <KpiCard title="Personas activas" value={number(kpis.personasActivas)} helper={`${number(kpis.totalTitulares)} titulares y ${number(kpis.totalBeneficiarios)} beneficiarios.`} icon={<UsersRound className="size-6" strokeWidth={2.4} />} accent="emerald" />
-              <KpiCard title="Valor mensual activo" value={money(kpis.ingresoMensual)} helper={`Proyeccion anual: ${money(kpis.ingresoAnualizado)}.`} icon={<BadgeDollarSign className="size-6" strokeWidth={2.4} />} accent="violet" />
+              <KpiCard
+                title={filters.fechaInicial || filters.fechaFinal ? 'Facturado en el período' : 'Facturado histórico'}
+                value={isBillingLoading ? 'Consultando…' : billingError ? '—' : money(billingSummary?.totalFacturado || 0)}
+                helper={
+                  billingError
+                    ? billingError
+                    : isBillingLoading
+                      ? 'Calculando con la fecha de facturación registrada en SAP.'
+                      : `${number(billingSummary?.contratosFacturados || 0)} contratos facturados según la fecha contable.`
+                }
+                icon={<BadgeDollarSign className="size-6" strokeWidth={2.4} />}
+                accent="violet"
+              />
               <KpiCard title="Mascotas activas" value={number(kpis.totalMascotas)} helper={`${number(kpis.personasRetiradas)} personas retiradas dentro de contratos activos.`} icon={<PawPrint className="size-6" strokeWidth={2.4} />} accent="orange" />
             </div>}
 

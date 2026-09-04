@@ -34,3 +34,32 @@ export async function fetchPrevisionRows({ from = '', to = '', refresh = '' } = 
   const payload = await response.json()
   return payload.rows || []
 }
+
+export async function fetchPrevisionBillingSummary({ from = '', to = '' } = {}) {
+  const search = new URLSearchParams()
+  if (from) search.set('from', from)
+  if (to) search.set('to', to)
+  const endpoint = `/api/prevision/facturacion${search.size ? `?${search}` : ''}`
+
+  let response
+  try {
+    response = await fetchWithRetry(endpoint, { timeoutMs: 30000 })
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('La consulta de facturación tardó demasiado.')
+    }
+    throw error
+  }
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}))
+    throw new Error(payload.message || 'No fue posible cargar la facturación de Previsión.')
+  }
+
+  const contentType = response.headers.get('content-type') || ''
+  if (!contentType.includes('application/json')) {
+    throw new Error('El servicio de facturación necesita reiniciarse para aplicar la actualización.')
+  }
+
+  return response.json()
+}
