@@ -3,6 +3,7 @@ import express from 'express'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { fetchHomenajes } from './homenajesRepository.js'
+import { fetchPrevisionBillingSummary } from './previsionBillingRepository.js'
 import { fetchPrevisionRows } from './previsionRepository.js'
 import { fetchRetiros } from './retirosRepository.js'
 
@@ -23,6 +24,19 @@ app.get('/api/prevision', async (request, response) => {
     console.error('[api/prevision]', error)
     response.status(500).json({
       message: 'No fue posible consultar la base de datos de Previsión.',
+      ...(process.env.NODE_ENV === 'development' ? { detail: error.message } : {}),
+    })
+  }
+})
+
+app.get('/api/prevision/facturacion', async (request, response) => {
+  try {
+    const range = { from: String(request.query.from || ''), to: String(request.query.to || '') }
+    response.json(await fetchPrevisionBillingSummary(range))
+  } catch (error) {
+    console.error('[api/prevision/facturacion]', error)
+    response.status(500).json({
+      message: 'No fue posible consultar la facturación de Previsión.',
       ...(process.env.NODE_ENV === 'development' ? { detail: error.message } : {}),
     })
   }
