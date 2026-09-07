@@ -3,10 +3,11 @@ import { isSupabaseConfigured, supabase } from '../lib/supabase.js'
 
 const AuthContext = createContext(null)
 
-function callbackRequiresPassword() {
-  const params = new URLSearchParams(window.location.hash.replace(/^#/, ''))
-  const type = params.get('type')
-  return type === 'invite' || type === 'recovery'
+function callbackPasswordFlow() {
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+  const queryParams = new URLSearchParams(window.location.search)
+  const type = hashParams.get('type') || queryParams.get('type') || queryParams.get('flow')
+  return type === 'invite' || type === 'recovery' ? type : null
 }
 
 async function requestProfile(accessToken) {
@@ -28,7 +29,7 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [requiresPasswordUpdate, setRequiresPasswordUpdate] = useState(callbackRequiresPassword)
+  const [passwordFlow, setPasswordFlow] = useState(callbackPasswordFlow)
 
   const loadProfile = useCallback(async (nextSession) => {
     if (!nextSession?.access_token) {
@@ -70,7 +71,7 @@ export function AuthProvider({ children }) {
     const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!active) return
       setSession(nextSession)
-      if (event === 'PASSWORD_RECOVERY') setRequiresPasswordUpdate(true)
+      if (event === 'PASSWORD_RECOVERY') setPasswordFlow('recovery')
       window.setTimeout(async () => {
         if (!active) return
         await loadProfile(nextSession)
@@ -98,13 +99,13 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut()
     setSession(null)
     setProfile(null)
-    setRequiresPasswordUpdate(false)
+    setPasswordFlow(null)
     setError('')
   }, [])
 
   const requestPasswordReset = useCallback(async (email) => {
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/`,
+      redirectTo: `${window.location.origin}/?flow=recovery`,
     })
     if (resetError) throw resetError
   }, [])
@@ -112,7 +113,7 @@ export function AuthProvider({ children }) {
   const updatePassword = useCallback(async (password) => {
     const { error: updateError } = await supabase.auth.updateUser({ password })
     if (updateError) throw updateError
-    setRequiresPasswordUpdate(false)
+    setPasswordFlow(null)
     window.history.replaceState({}, document.title, window.location.pathname)
   }, [])
 
@@ -123,7 +124,8 @@ export function AuthProvider({ children }) {
     profile,
     loading,
     error,
-    requiresPasswordUpdate,
+    requiresPasswordUpdate: Boolean(passwordFlow),
+    passwordFlow,
     signIn,
     signOut,
     requestPasswordReset,
@@ -134,7 +136,7 @@ export function AuthProvider({ children }) {
     profile,
     loading,
     error,
-    requiresPasswordUpdate,
+    passwordFlow,
     signIn,
     signOut,
     requestPasswordReset,

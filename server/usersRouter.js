@@ -76,7 +76,7 @@ router.post('/', async (request, response) => {
   try {
     const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
       data: { full_name: fullName },
-      redirectTo: `${appUrl}/`,
+      redirectTo: `${appUrl}/?flow=invite`,
     })
     if (error) throw error
     createdUser = data.user
@@ -152,7 +152,7 @@ router.post('/:userId/reset-password', async (request, response) => {
   try {
     const profile = await fetchProfile(request.params.userId, request.auth.client)
     const { error } = await supabaseAdmin.auth.resetPasswordForEmail(profile.email, {
-      redirectTo: `${appUrl}/`,
+      redirectTo: `${appUrl}/?flow=recovery`,
     })
     if (error) throw error
     response.json({ message: 'Se envió el enlace para restablecer la contraseña.' })
