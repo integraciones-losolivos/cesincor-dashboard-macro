@@ -1,3 +1,5 @@
+import { supabase } from '../lib/supabase.js'
+
 const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504])
 
 function wait(milliseconds) {
@@ -13,7 +15,15 @@ export async function fetchWithRetry(url, options = {}) {
     const timeout = window.setTimeout(() => controller.abort(), timeoutMs)
 
     try {
-      const response = await fetch(url, { ...fetchOptions, signal: controller.signal })
+      const headers = new Headers(fetchOptions.headers || {})
+      if (supabase && !headers.has('Authorization')) {
+        const { data } = await supabase.auth.getSession()
+        if (data.session?.access_token) {
+          headers.set('Authorization', `Bearer ${data.session.access_token}`)
+        }
+      }
+
+      const response = await fetch(url, { ...fetchOptions, headers, signal: controller.signal })
       if (!RETRYABLE_STATUS.has(response.status) || attempt === attempts) return response
       lastError = new Error(`El servidor respondió HTTP ${response.status}.`)
     } catch (error) {
