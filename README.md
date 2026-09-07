@@ -48,6 +48,11 @@ prefijo `VITE_` ni incluirse en el repositorio. El panel **Usuarios**, visible
 solo para administradores, permite invitar personas, cambiar nombre, rol,
 estado y módulos, y enviar correos para restablecer contraseñas.
 
+Las plantillas en español para invitación, recuperación y aviso de cambio de
+contraseña se encuentran en `supabase/email-templates`. Supabase requiere un
+SMTP personalizado para activarlas y para reemplazar el remitente genérico
+`Supabase Auth` por la identidad de Los Olivos.
+
 ## Compilación
 
 ```bash
