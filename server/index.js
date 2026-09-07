@@ -6,17 +6,27 @@ import { fetchHomenajes } from './homenajesRepository.js'
 import { fetchPrevisionBillingSummary } from './previsionBillingRepository.js'
 import { fetchPrevisionRows } from './previsionRepository.js'
 import { fetchRetiros } from './retirosRepository.js'
+import { requireAuth, requireModule } from './auth.js'
+import usersRouter from './usersRouter.js'
 
 const app = express()
 const port = Number(process.env.PORT || process.env.API_PORT || 3001)
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const distDirectory = path.join(projectRoot, 'dist')
 
+app.use(express.json({ limit: '100kb' }))
+
 app.get('/api/health', (_request, response) => {
   response.json({ ok: true, dataSource: 'hana-direct' })
 })
 
-app.get('/api/prevision', async (request, response) => {
+app.get('/api/auth/me', requireAuth, (request, response) => {
+  response.json({ profile: request.auth.profile })
+})
+
+app.use('/api/admin/users', usersRouter)
+
+app.get('/api/prevision', requireAuth, requireModule('prevision'), async (request, response) => {
   try {
     const range = { from: String(request.query.from || ''), to: String(request.query.to || ''), refresh: String(request.query.refresh || '') }
     response.json({ rows: await fetchPrevisionRows(range) })
@@ -29,7 +39,7 @@ app.get('/api/prevision', async (request, response) => {
   }
 })
 
-app.get('/api/prevision/facturacion', async (request, response) => {
+app.get('/api/prevision/facturacion', requireAuth, requireModule('prevision'), async (request, response) => {
   try {
     const range = { from: String(request.query.from || ''), to: String(request.query.to || '') }
     response.json(await fetchPrevisionBillingSummary(range))
@@ -42,7 +52,7 @@ app.get('/api/prevision/facturacion', async (request, response) => {
   }
 })
 
-app.get('/api/homenajes', async (request, response) => {
+app.get('/api/homenajes', requireAuth, requireModule('homenajes'), async (request, response) => {
   try {
     const range = { from: String(request.query.from || ''), to: String(request.query.to || '') }
     response.json(await fetchHomenajes(range))
@@ -55,7 +65,7 @@ app.get('/api/homenajes', async (request, response) => {
   }
 })
 
-app.get('/api/retiros', async (request, response) => {
+app.get('/api/retiros', requireAuth, requireModule('prevision'), async (request, response) => {
   try {
     const range = { from: String(request.query.from || ''), to: String(request.query.to || ''), refresh: String(request.query.refresh || '') }
     response.json({ rows: await fetchRetiros(range) })
