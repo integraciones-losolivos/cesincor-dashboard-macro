@@ -21,6 +21,11 @@ function normalizeRole(value) {
   return VALID_ROLES.has(role) ? role : 'user'
 }
 
+function isEmailRateLimitError(error) {
+  return error?.code === 'over_email_send_rate_limit'
+    || /email rate limit|rate limit.*email/i.test(String(error?.message || ''))
+}
+
 async function replacePermissions(client, userId, modules) {
   const { error: deleteError } = await client
     .from('user_module_permissions')
@@ -102,10 +107,13 @@ router.post('/', async (request, response) => {
     console.error('[admin/users:create]', error)
     if (createdUser?.id) await supabaseAdmin.auth.admin.deleteUser(createdUser.id).catch(() => {})
     const duplicate = /already|registered|exists/i.test(String(error.message || ''))
-    response.status(duplicate ? 409 : 500).json({
+    const rateLimited = isEmailRateLimitError(error)
+    response.status(duplicate ? 409 : rateLimited ? 429 : 500).json({
       message: duplicate
         ? 'Ya existe un usuario registrado con ese correo.'
-        : 'No fue posible crear e invitar al usuario.',
+        : rateLimited
+          ? 'Supabase alcanzó el límite temporal de correos. Espera unos minutos antes de volver a invitar.'
+          : 'No fue posible crear e invitar al usuario.',
     })
   }
 })
@@ -158,7 +166,12 @@ router.post('/:userId/reset-password', async (request, response) => {
     response.json({ message: 'Se envió el enlace para restablecer la contraseña.' })
   } catch (error) {
     console.error('[admin/users:reset-password]', error)
-    response.status(500).json({ message: 'No fue posible enviar el correo de recuperación.' })
+    const rateLimited = isEmailRateLimitError(error)
+    response.status(rateLimited ? 429 : 500).json({
+      message: rateLimited
+        ? 'Supabase alcanzó el límite temporal de correos. Espera unos minutos antes de volver a enviar el enlace.'
+        : 'No fue posible enviar el correo de recuperación.',
+    })
   }
 })
 
