@@ -48,6 +48,13 @@ prefijo `VITE_` ni incluirse en el repositorio. El panel **Usuarios**, visible
 solo para administradores, permite invitar personas, cambiar nombre, rol,
 estado y módulos, y enviar correos para restablecer contraseñas.
 
+Para que la recuperación funcione, agrega
+`https://dashboard.losolivoscordobaysucre.com/reset-password` en **Supabase →
+Authentication → URL Configuration → Redirect URLs**. El enlace del correo
+abre esa pantalla pública, valida de forma temporal a la persona mediante el
+token recibido y le permite definir una contraseña nueva; no requiere que
+recuerde ni ingrese su contraseña anterior.
+
 Las plantillas en español para invitación, recuperación y aviso de cambio de
 contraseña se encuentran en `supabase/email-templates`. Supabase requiere un
 SMTP personalizado para activarlas y para reemplazar el remitente genérico

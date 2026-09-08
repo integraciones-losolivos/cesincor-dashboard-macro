@@ -7,6 +7,7 @@ function callbackPasswordFlow() {
   const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
   const queryParams = new URLSearchParams(window.location.search)
   const type = hashParams.get('type') || queryParams.get('type') || queryParams.get('flow')
+  if (window.location.pathname === '/reset-password') return 'recovery'
   return type === 'invite' || type === 'recovery' ? type : null
 }
 
@@ -105,7 +106,7 @@ export function AuthProvider({ children }) {
 
   const requestPasswordReset = useCallback(async (email) => {
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/?flow=recovery`,
+      redirectTo: `${window.location.origin}/reset-password`,
     })
     if (resetError) throw resetError
   }, [])
