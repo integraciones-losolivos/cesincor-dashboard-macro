@@ -129,7 +129,7 @@ function UserForm({ user, submitting, onCancel, onSubmit }) {
       {!user && (
         <div className="flex gap-3 rounded-xl bg-blue-50 p-4 text-sm font-semibold leading-6 text-blue-800">
           <MailPlus className="mt-0.5 size-5 shrink-0" />
-          La persona recibirá una invitación para crear su contraseña.
+          La persona recibirá un enlace único en este correo. Desde allí creará su contraseña personal y entrará al dashboard.
         </div>
       )}
 
@@ -190,7 +190,7 @@ export default function AdminUsersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       }))
-      setMessage(editing ? 'Usuario actualizado correctamente.' : 'Usuario creado. La invitación fue enviada por correo.')
+      setMessage(editing ? 'Usuario actualizado correctamente.' : `Usuario creado. Enviamos a ${form.email} el enlace para activar su cuenta.`)
       setEditingUser(null)
       setShowCreate(false)
       await loadUsers()
