@@ -1,6 +1,7 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Banknote,
+  ChevronDown,
   HandHeart,
   LayoutDashboard,
   LogOut,
@@ -84,27 +85,40 @@ const adminModule = {
 
 function AuthenticatedDashboard() {
   const { profile, signOut } = useAuth()
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+  const profileMenuRef = useRef(null)
   const availableModules = useMemo(() => {
-    const allowed = profile.role === 'admin'
+    return profile.role === 'admin'
       ? modules
       : modules.filter((module) => profile.modules.includes(module.id))
-    return profile.role === 'admin' ? [...allowed, adminModule] : allowed
   }, [profile])
+  const accessibleModules = useMemo(
+    () => profile.role === 'admin' ? [...availableModules, adminModule] : availableModules,
+    [availableModules, profile.role],
+  )
   const [activeModule, setActiveModule] = useState(() => availableModules[0]?.id || '')
   const [visitedModules, setVisitedModules] = useState(() => new Set(activeModule ? [activeModule] : []))
 
   useEffect(() => {
-    if (!availableModules.some((module) => module.id === activeModule)) {
+    if (!accessibleModules.some((module) => module.id === activeModule)) {
       const firstModule = availableModules[0]?.id || ''
       setActiveModule(firstModule)
       setVisitedModules((current) => firstModule ? new Set(current).add(firstModule) : current)
     }
-  }, [activeModule, availableModules])
+  }, [accessibleModules, activeModule, availableModules])
 
   const selectedModule = useMemo(
-    () => availableModules.find((module) => module.id === activeModule) || availableModules[0],
-    [activeModule, availableModules],
+    () => accessibleModules.find((module) => module.id === activeModule) || availableModules[0],
+    [accessibleModules, activeModule, availableModules],
   )
+
+  useEffect(() => {
+    const closeProfileMenu = (event) => {
+      if (!profileMenuRef.current?.contains(event.target)) setProfileMenuOpen(false)
+    }
+    document.addEventListener('pointerdown', closeProfileMenu)
+    return () => document.removeEventListener('pointerdown', closeProfileMenu)
+  }, [])
 
   const activateModule = (moduleId) => {
     setActiveModule(moduleId)
@@ -141,7 +155,13 @@ function AuthenticatedDashboard() {
                   onClick={() => activateModule(module.id)}
                   className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-black transition ${
                     isActive
-                      ? 'bg-gradient-to-r from-emerald-800 to-green-600 text-white shadow-lg shadow-emerald-700/20'
+                      ? module.id === 'prevision'
+                        ? 'bg-gradient-to-r from-blue-800 to-cyan-600 text-white shadow-lg shadow-blue-700/20'
+                        : module.id === 'homenajes'
+                          ? 'bg-gradient-to-r from-emerald-800 to-green-600 text-white shadow-lg shadow-emerald-700/20'
+                          : module.id === 'cartera'
+                            ? 'bg-gradient-to-r from-amber-600 to-orange-500 text-white shadow-lg shadow-amber-600/20'
+                            : 'bg-gradient-to-r from-violet-700 to-fuchsia-600 text-white shadow-lg shadow-violet-700/20'
                       : 'bg-white text-slate-600 hover:bg-emerald-100 hover:text-emerald-900'
                   }`}
                   aria-pressed={isActive}
@@ -153,17 +173,22 @@ function AuthenticatedDashboard() {
             })}
           </div>
 
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-slate-100 bg-white px-3 py-2 xl:justify-start">
-            <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-emerald-100 text-sm font-black text-emerald-800">
-              {(profile.fullName || profile.email).charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <p className="max-w-44 truncate text-xs font-black text-slate-800">{profile.fullName || 'Usuario'}</p>
-              <p className="max-w-44 truncate text-[11px] font-semibold text-slate-400">{profile.email}</p>
-            </div>
-            <button type="button" onClick={signOut} className="grid size-9 shrink-0 place-items-center rounded-xl text-slate-400 transition hover:bg-rose-50 hover:text-rose-600" aria-label="Cerrar sesión">
-              <LogOut className="size-4" />
+          <div ref={profileMenuRef} className="relative">
+            <button type="button" onClick={() => setProfileMenuOpen((current) => !current)} aria-expanded={profileMenuOpen} className="flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-left shadow-sm transition hover:border-emerald-200 hover:shadow-md xl:w-auto">
+              <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-emerald-100 text-sm font-black text-emerald-800">{(profile.fullName || profile.email).charAt(0).toUpperCase()}</div>
+              <div className="min-w-0 flex-1">
+                <p className="max-w-44 truncate text-xs font-black text-slate-800">{profile.fullName || 'Usuario'}</p>
+                <p className="max-w-44 truncate text-[11px] font-semibold text-slate-400">{profile.email}</p>
+              </div>
+              <ChevronDown className={`size-4 shrink-0 text-slate-400 transition ${profileMenuOpen ? 'rotate-180' : ''}`} />
             </button>
+            {profileMenuOpen && (
+              <div className="absolute right-0 top-[calc(100%+0.6rem)] z-30 w-full min-w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-950/15 xl:w-72">
+                {profile.role === 'admin' && <button type="button" onClick={() => { activateModule('usuarios'); setProfileMenuOpen(false) }} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black transition ${activeModule === 'usuarios' ? 'bg-violet-50 text-violet-800' : 'text-slate-700 hover:bg-slate-50'}`}><span className="grid size-9 place-items-center rounded-xl bg-violet-100 text-violet-700"><UsersRound className="size-4" /></span><span>Administrar usuarios</span></button>}
+                <div className="my-1 border-t border-slate-100" />
+                <button type="button" onClick={signOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black text-rose-600 transition hover:bg-rose-50"><span className="grid size-9 place-items-center rounded-xl bg-rose-100 text-rose-600"><LogOut className="size-4" /></span><span>Cerrar sesión</span></button>
+              </div>
+            )}
           </div>
         </div>
       </nav>
