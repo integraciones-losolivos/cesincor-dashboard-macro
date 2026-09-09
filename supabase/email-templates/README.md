@@ -18,7 +18,7 @@ transaccional propio, autentica el dominio remitente con SPF y DKIM, y agrega
 `https://dashboard.losolivoscordobaysucre.com/**` a **Redirect URLs** en Auth.
 
 El logotipo se carga desde el sitio institucional público para que sea visible
-en los clientes de correo. Las plantillas de invitación y recuperación usan
-`{{ .ConfirmationURL }}`, que Supabase sustituye por el enlace seguro de cada
-persona. La invitación también muestra `{{ .Email }}` como correo de ingreso y
-enlaza `{{ .SiteURL }}` al sitio configurado del proyecto.
+en los clientes de correo. Las plantillas de invitación y recuperación
+construyen enlaces con `{{ .TokenHash }}`. La aplicación consume ese código con
+`verifyOtp`, por lo que solo puede utilizarse una vez y nunca expone una sesión
+reutilizable en la URL. La invitación también muestra `{{ .Email }}`.

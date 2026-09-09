@@ -112,10 +112,18 @@ router.post('/', async (request, response) => {
           email,
           password: generatedPassword,
           email_confirm: true,
-          user_metadata: { full_name: fullName, force_password_change: true },
+          user_metadata: { full_name: fullName },
+          app_metadata: { force_password_change: true },
         })
     if (error) throw error
     createdUser = data.user
+
+    if (accessMethod === 'email') {
+      const { error: metadataError } = await supabaseAdmin.auth.admin.updateUserById(createdUser.id, {
+        app_metadata: { ...createdUser.app_metadata, force_password_change: true },
+      })
+      if (metadataError) throw metadataError
+    }
 
     const { error: profileError } = await request.auth.client
       .from('profiles')

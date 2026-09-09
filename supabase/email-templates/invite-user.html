@@ -17,7 +17,7 @@
         <div style="color:#0f172a;font-size:16px;font-weight:800;word-break:break-all;">{{ .Email }}</div>
       </div>
       <p style="margin:0;color:#475569;font-size:16px;line-height:1.7;">Abre el enlace seguro para activar tu cuenta y crear tu propia contraseña. Al terminar, podrás ingresar directamente a los módulos que te fueron asignados.</p>
-      <table role="presentation" cellspacing="0" cellpadding="0" style="margin:28px 0;"><tr><td style="border-radius:14px;background:#047857;"><a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:15px 24px;color:#fff;font-size:15px;font-weight:800;text-decoration:none;">Activar mi cuenta</a></td></tr></table>
+      <table role="presentation" cellspacing="0" cellpadding="0" style="margin:28px 0;"><tr><td style="border-radius:14px;background:#047857;"><a href="{{ .SiteURL }}/?token_hash={{ .TokenHash }}&amp;type=invite" style="display:inline-block;padding:15px 24px;color:#fff;font-size:15px;font-weight:800;text-decoration:none;">Activar mi cuenta</a></td></tr></table>
       <p style="margin:0 0 18px;color:#64748b;font-size:13px;line-height:1.6;">Sitio web: <a href="{{ .SiteURL }}" style="color:#047857;font-weight:700;text-decoration:underline;">dashboard.losolivoscordobaysucre.com</a></p>
       <p style="margin:0;color:#64748b;font-size:13px;line-height:1.6;">Por seguridad, utiliza este enlace únicamente si reconoces la invitación. Si no esperabas este correo, puedes ignorarlo.</p>
     </td></tr>
