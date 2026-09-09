@@ -45,14 +45,14 @@ export default function PrevisionFilters({
 
   return (
     <section className="card-shadow overflow-hidden rounded-2xl border border-slate-200/80 bg-white">
-      <div className="grid gap-4 border-b border-orange-200 bg-gradient-to-r from-orange-900 to-orange-700 p-4 text-white lg:grid-cols-[1fr_auto] lg:items-center">
+      <div className="grid gap-4 border-b border-amber-900/20 bg-gradient-to-r from-slate-950 to-amber-950 p-4 text-white lg:grid-cols-[1fr_auto] lg:items-center">
         <div className="flex items-start gap-3">
           <div className="grid size-10 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/10">
               <Filter className="size-5" strokeWidth={2.4} />
           </div>
           <div>
             <h2 className="text-lg font-bold tracking-tight">Filtros ejecutivos</h2>
-            <p className="mt-1 text-sm leading-5 text-orange-100">Panel compacto alineado a Crystal: Tipo de afiliación, localidad, convenio, plan, asesora y estado.</p>
+            <p className="mt-1 text-sm leading-5 text-amber-100/85">Panel compacto alineado a Crystal: Tipo de afiliación, localidad, convenio, plan, asesora y estado.</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 lg:justify-end">
@@ -87,7 +87,7 @@ export default function PrevisionFilters({
             type="button"
             onClick={onRefresh}
             disabled={isLoadingHistory}
-            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-orange-600 bg-orange-50 px-4 py-2 text-sm font-black text-orange-800 transition hover:bg-orange-100 disabled:cursor-wait disabled:opacity-60"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-amber-700 bg-amber-50 px-4 py-2 text-sm font-black text-amber-900 transition hover:bg-amber-100 disabled:cursor-wait disabled:opacity-60"
           >
             <RefreshCw className={`size-4 ${isLoadingHistory ? 'animate-spin' : ''}`} />
             Actualizar datos
@@ -141,8 +141,8 @@ function PeriodButton({ active = false, onClick, children }) {
       aria-pressed={active}
       className={`min-h-11 rounded-xl border px-4 py-2 text-sm font-black transition ${
         active
-          ? 'border-orange-700 bg-orange-700 text-white shadow-sm'
-          : 'border-slate-300 bg-white text-slate-700 hover:border-orange-600 hover:bg-orange-50'
+          ? 'border-amber-800 bg-amber-800 text-white shadow-sm'
+          : 'border-slate-300 bg-white text-slate-700 hover:border-amber-700 hover:bg-amber-50'
       }`}
     >
       {children}

@@ -310,9 +310,9 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
   const petSummary = useMemo(() => buildPetSummary(filteredRows), [filteredRows])
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#ffedd5_0,#f8fafc_34%,#f8fafc_100%)]">
-      <section className="relative overflow-hidden border-b border-orange-200 bg-gradient-to-br from-orange-950 via-orange-800 to-amber-500 px-4 py-10 text-white sm:px-6 lg:px-8">
-        <div className="absolute right-[-5rem] top-[-6rem] h-72 w-72 rounded-full bg-amber-200/25 blur-3xl" />
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#fff7ed_0,#f8fafc_32%,#f8fafc_100%)]">
+      <section className="relative overflow-hidden border-b border-amber-900/20 bg-gradient-to-br from-slate-950 via-amber-950 to-orange-800 px-4 py-10 text-white sm:px-6 lg:px-8">
+        <div className="absolute right-[-5rem] top-[-6rem] h-72 w-72 rounded-full bg-amber-400/15 blur-3xl" />
         <div className="relative mx-auto flex max-w-7xl flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex items-center gap-4">
             <div className="grid size-14 shrink-0 place-items-center rounded-[1.4rem] border border-white/15 bg-white/10 text-white shadow-lg">
@@ -503,7 +503,7 @@ function ReportTabs({ activeView, setActiveView }) {
             type="button"
             onClick={() => setActiveView(view.id)}
             className={`flex h-12 items-center justify-center gap-2 rounded-xl text-sm font-black transition ${
-              isActive ? 'bg-orange-700 text-white shadow-lg shadow-orange-900/15' : 'text-slate-600 hover:bg-orange-50 hover:text-orange-900'
+              isActive ? 'bg-amber-800 text-white shadow-lg shadow-amber-950/15' : 'text-slate-600 hover:bg-amber-50 hover:text-amber-950'
             }`}
           >
             <Icon className="size-4" strokeWidth={2.5} />

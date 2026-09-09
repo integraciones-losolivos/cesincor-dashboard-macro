@@ -158,7 +158,7 @@ function AuthenticatedDashboard() {
                   className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-black transition ${
                     isActive
                       ? module.id === 'prevision'
-                        ? 'bg-gradient-to-r from-orange-700 to-amber-500 text-white shadow-lg shadow-orange-700/20'
+                        ? 'bg-gradient-to-r from-amber-800 to-orange-700 text-white shadow-lg shadow-amber-900/20'
                         : module.id === 'homenajes'
                           ? 'bg-gradient-to-r from-emerald-800 to-green-600 text-white shadow-lg shadow-emerald-700/20'
                           : module.id === 'cartera'
