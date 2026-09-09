@@ -3,6 +3,15 @@ import { isSupabaseConfigured, supabase } from '../lib/supabase.js'
 
 const AuthContext = createContext(null)
 
+function callbackAuthError() {
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+  const queryParams = new URLSearchParams(window.location.search)
+  const description = hashParams.get('error_description') || queryParams.get('error_description')
+  if (!description) return ''
+  if (/expired/i.test(description)) return 'El enlace venció. Solicita uno nuevo.'
+  return 'El enlace de acceso no es válido o ya fue utilizado. Solicita uno nuevo.'
+}
+
 function callbackPasswordFlow() {
   const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''))
   const queryParams = new URLSearchParams(window.location.search)
@@ -29,7 +38,7 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(callbackAuthError)
   const [passwordFlow, setPasswordFlow] = useState(callbackPasswordFlow)
 
   const loadProfile = useCallback(async (nextSession) => {
@@ -65,6 +74,7 @@ export function AuthProvider({ children }) {
     supabase.auth.getSession().then(async ({ data }) => {
       if (!active) return
       setSession(data.session)
+      if (data.session?.user?.user_metadata?.force_password_change) setPasswordFlow('forced')
       await loadProfile(data.session)
       if (active) setLoading(false)
     })
@@ -73,6 +83,7 @@ export function AuthProvider({ children }) {
       if (!active) return
       setSession(nextSession)
       if (event === 'PASSWORD_RECOVERY') setPasswordFlow('recovery')
+      else if (nextSession?.user?.user_metadata?.force_password_change) setPasswordFlow('forced')
       window.setTimeout(async () => {
         if (!active) return
         await loadProfile(nextSession)
@@ -91,6 +102,7 @@ export function AuthProvider({ children }) {
     const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
     if (signInError) throw signInError
     setSession(data.session)
+    if (data.user?.user_metadata?.force_password_change) setPasswordFlow('forced')
     const nextProfile = await loadProfile(data.session)
     if (!nextProfile) throw new Error('Tu cuenta no tiene acceso habilitado.')
     return nextProfile
@@ -112,7 +124,10 @@ export function AuthProvider({ children }) {
   }, [])
 
   const updatePassword = useCallback(async (password) => {
-    const { error: updateError } = await supabase.auth.updateUser({ password })
+    const { error: updateError } = await supabase.auth.updateUser({
+      password,
+      data: { force_password_change: false },
+    })
     if (updateError) throw updateError
     setPasswordFlow(null)
     window.history.replaceState({}, document.title, window.location.pathname)

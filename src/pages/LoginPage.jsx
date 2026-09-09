@@ -132,6 +132,16 @@ const flowPresentation = {
     iconClass: 'bg-sky-100 text-sky-800',
     accentClass: 'bg-sky-400',
   },
+  forced: {
+    eyebrow: 'Primer ingreso',
+    title: 'Crea tu contraseña personal',
+    description: 'Por seguridad, debes reemplazar la contraseña temporal antes de continuar.',
+    heroTitle: 'Protege tu cuenta antes de entrar.',
+    heroDescription: 'Define una contraseña que solo tú conozcas para acceder a los módulos asignados.',
+    icon: KeyRound,
+    iconClass: 'bg-violet-100 text-violet-800',
+    accentClass: 'bg-violet-400',
+  },
 }
 
 export default function LoginPage() {
@@ -357,7 +367,7 @@ export default function LoginPage() {
                   <PasswordChecklist password={password} />
                   <PasswordField value={confirmPassword} onChange={setConfirmPassword} placeholder="Repite la contraseña" autoComplete="new-password" label="Confirmar contraseña" />
                   <button type="submit" disabled={submitting || !strongPassword} className="w-full rounded-2xl bg-emerald-800 px-5 py-3.5 text-sm font-black text-white shadow-lg shadow-emerald-900/20 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
-                    {submitting ? 'Guardando contraseña…' : passwordFlow === 'invite' ? 'Activar mi cuenta' : 'Guardar nueva contraseña'}
+                    {submitting ? 'Guardando contraseña…' : passwordFlow === 'invite' ? 'Activar mi cuenta' : passwordFlow === 'forced' ? 'Cambiar contraseña y continuar' : 'Guardar nueva contraseña'}
                   </button>
                 </form>
               ) : mode === 'reset' ? (
