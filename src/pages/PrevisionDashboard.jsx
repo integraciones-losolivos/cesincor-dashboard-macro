@@ -26,7 +26,6 @@ import ChartCard from '../components/ChartCard.jsx'
 import ContractImpactList from '../components/prevision/ContractImpactList.jsx'
 import CustomTooltip from '../components/CustomTooltip.jsx'
 import EmptyState from '../components/EmptyState.jsx'
-import ExecutiveBalance from '../components/prevision/ExecutiveBalance.jsx'
 import KpiCard from '../components/KpiCard.jsx'
 import PrevisionFilters from '../components/prevision/PrevisionFilters.jsx'
 import RetirosDashboard from './RetirosDashboard.jsx'
@@ -379,14 +378,14 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
               <KpiCard title="Contratos activos" value={number(kpis.contratosActivos)} helper={`Promedio por contrato: ${money(kpis.valorPromedioContrato)}.`} icon={<ClipboardList className="size-6" strokeWidth={2.4} />} accent="blue" />
               <KpiCard title="Personas activas" value={number(kpis.personasActivas)} helper={`${number(kpis.totalTitulares)} titulares y ${number(kpis.totalBeneficiarios)} beneficiarios.`} icon={<UsersRound className="size-6" strokeWidth={2.4} />} accent="emerald" />
               <KpiCard
-                title={filters.fechaInicial || filters.fechaFinal ? 'Facturado en el período' : 'Facturado histórico'}
+                title={filters.fechaInicial || filters.fechaFinal ? 'Total contable registrado' : 'Total contable histórico'}
                 value={isBillingLoading ? 'Consultando…' : billingError ? '—' : money(billingSummary?.totalFacturado || 0)}
                 helper={
                   billingError
                     ? billingError
                     : isBillingLoading
-                      ? 'Calculando con la fecha de facturación registrada en SAP.'
-                      : `${number(billingSummary?.contratosFacturados || 0)} contratos facturados según la fecha contable.`
+                      ? 'Consultando movimientos registrados por fecha contable en SAP.'
+                      : `${number(billingSummary?.contratosFacturados || 0)} contratos en @OK1_EXE_FACT_OJDT · suma de U_LocTotal.`
                 }
                 icon={<BadgeDollarSign className="size-6" strokeWidth={2.4} />}
                 accent="violet"
@@ -398,7 +397,6 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
             <EmptyState />
           ) : (
             <>
-              <ExecutiveBalance kpis={kpis} />
               {activeView === 'activos' && (
                 <ActivePortfolioCharts
                   monthly={monthly}
