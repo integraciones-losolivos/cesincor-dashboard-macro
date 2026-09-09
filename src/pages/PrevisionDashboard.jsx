@@ -310,20 +310,20 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
   const petSummary = useMemo(() => buildPetSummary(filteredRows), [filteredRows])
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#dbeafe_0,#f8fafc_34%,#f8fafc_100%)]">
-      <section className="relative overflow-hidden border-b border-blue-200 bg-gradient-to-br from-blue-950 via-blue-800 to-cyan-600 px-4 py-10 text-white sm:px-6 lg:px-8">
-        <div className="absolute right-[-5rem] top-[-6rem] h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl" />
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#ffedd5_0,#f8fafc_34%,#f8fafc_100%)]">
+      <section className="relative overflow-hidden border-b border-orange-200 bg-gradient-to-br from-orange-950 via-orange-800 to-amber-500 px-4 py-10 text-white sm:px-6 lg:px-8">
+        <div className="absolute right-[-5rem] top-[-6rem] h-72 w-72 rounded-full bg-amber-200/25 blur-3xl" />
         <div className="relative mx-auto flex max-w-7xl flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex items-center gap-4">
             <div className="grid size-14 shrink-0 place-items-center rounded-[1.4rem] border border-white/15 bg-white/10 text-white shadow-lg">
               <ShieldCheck className="size-7" strokeWidth={2.5} />
             </div>
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-100">Área · Informe corporativo</p>
+              <p className="text-xs font-black uppercase tracking-[0.28em] text-orange-100">Área · Informe corporativo</p>
               <h1 className="mt-1 font-heading text-3xl font-bold tracking-tight text-white sm:text-5xl">{areaName}</h1>
             </div>
           </div>
-          <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-bold text-blue-50 backdrop-blur">
+          <div className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-bold text-orange-50 backdrop-blur">
             Datos en vivo desde SAP HANA
           </div>
         </div>
@@ -503,7 +503,7 @@ function ReportTabs({ activeView, setActiveView }) {
             type="button"
             onClick={() => setActiveView(view.id)}
             className={`flex h-12 items-center justify-center gap-2 rounded-xl text-sm font-black transition ${
-              isActive ? 'bg-blue-800 text-white shadow-lg shadow-blue-900/15' : 'text-slate-600 hover:bg-blue-50 hover:text-blue-900'
+              isActive ? 'bg-orange-700 text-white shadow-lg shadow-orange-900/15' : 'text-slate-600 hover:bg-orange-50 hover:text-orange-900'
             }`}
           >
             <Icon className="size-4" strokeWidth={2.5} />

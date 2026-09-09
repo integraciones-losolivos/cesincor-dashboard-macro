@@ -7,6 +7,7 @@ import {
   LogOut,
   ReceiptText,
   ShieldCheck,
+  UserRound,
   UsersRound,
 } from 'lucide-react'
 import { useAuth } from './auth/AuthContext.jsx'
@@ -111,6 +112,7 @@ function AuthenticatedDashboard() {
     () => accessibleModules.find((module) => module.id === activeModule) || availableModules[0],
     [accessibleModules, activeModule, availableModules],
   )
+  const isAdmin = profile.role === 'admin'
 
   useEffect(() => {
     const closeProfileMenu = (event) => {
@@ -156,11 +158,11 @@ function AuthenticatedDashboard() {
                   className={`inline-flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-black transition ${
                     isActive
                       ? module.id === 'prevision'
-                        ? 'bg-gradient-to-r from-blue-800 to-cyan-600 text-white shadow-lg shadow-blue-700/20'
+                        ? 'bg-gradient-to-r from-orange-700 to-amber-500 text-white shadow-lg shadow-orange-700/20'
                         : module.id === 'homenajes'
                           ? 'bg-gradient-to-r from-emerald-800 to-green-600 text-white shadow-lg shadow-emerald-700/20'
                           : module.id === 'cartera'
-                            ? 'bg-gradient-to-r from-amber-600 to-orange-500 text-white shadow-lg shadow-amber-600/20'
+                            ? 'bg-gradient-to-r from-blue-700 to-cyan-600 text-white shadow-lg shadow-blue-700/20'
                             : 'bg-gradient-to-r from-violet-700 to-fuchsia-600 text-white shadow-lg shadow-violet-700/20'
                       : 'bg-white text-slate-600 hover:bg-emerald-100 hover:text-emerald-900'
                   }`}
@@ -175,10 +177,12 @@ function AuthenticatedDashboard() {
 
           <div ref={profileMenuRef} className="relative">
             <button type="button" onClick={() => setProfileMenuOpen((current) => !current)} aria-expanded={profileMenuOpen} className="flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-left shadow-sm transition hover:border-emerald-200 hover:shadow-md xl:w-auto">
-              <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-emerald-100 text-sm font-black text-emerald-800">{(profile.fullName || profile.email).charAt(0).toUpperCase()}</div>
+              <div className={`grid size-9 shrink-0 place-items-center rounded-xl ${isAdmin ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-800'}`}>
+                {isAdmin ? <ShieldCheck className="size-4.5" strokeWidth={2.6} /> : <UserRound className="size-4.5" strokeWidth={2.6} />}
+              </div>
               <div className="min-w-0 flex-1">
                 <p className="max-w-44 truncate text-xs font-black text-slate-800">{profile.fullName || 'Usuario'}</p>
-                <p className="max-w-44 truncate text-[11px] font-semibold text-slate-400">{profile.email}</p>
+                <p className={`max-w-44 truncate text-[11px] font-bold ${isAdmin ? 'text-violet-600' : 'text-slate-400'}`}>{isAdmin ? 'Administrador' : 'Usuario'} · {profile.email}</p>
               </div>
               <ChevronDown className={`size-4 shrink-0 text-slate-400 transition ${profileMenuOpen ? 'rotate-180' : ''}`} />
             </button>
