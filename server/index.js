@@ -6,7 +6,7 @@ import { fetchHomenajes } from './homenajesRepository.js'
 import { fetchPrevisionBillingSummary } from './previsionBillingRepository.js'
 import { fetchPrevisionRows } from './previsionRepository.js'
 import { fetchRetiros } from './retirosRepository.js'
-import { requireAuth, requireModule } from './auth.js'
+import { requireAuth, requireModule, supabaseAdmin } from './auth.js'
 import usersRouter from './usersRouter.js'
 
 const app = express()
@@ -22,6 +22,36 @@ app.get('/api/health', (_request, response) => {
 
 app.get('/api/auth/me', requireAuth, (request, response) => {
   response.json({ profile: request.auth.profile })
+})
+
+app.post('/api/auth/update-password', requireAuth, async (request, response) => {
+  const password = String(request.body.password || '')
+  const strongPassword = password.length >= 8
+    && /[a-z]/.test(password)
+    && /[A-Z]/.test(password)
+    && /\d/.test(password)
+    && /[^A-Za-z0-9]/.test(password)
+
+  if (!strongPassword) {
+    response.status(400).json({ message: 'La contraseña no cumple los requisitos de seguridad.' })
+    return
+  }
+
+  try {
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(request.auth.user.id, {
+      password,
+      app_metadata: {
+        ...request.auth.user.app_metadata,
+        force_password_change: false,
+        password_changed_at: new Date().toISOString(),
+      },
+    })
+    if (error) throw error
+    response.json({ message: 'Contraseña actualizada correctamente.' })
+  } catch (error) {
+    console.error('[auth:update-password]', error)
+    response.status(500).json({ message: 'No fue posible actualizar la contraseña.' })
+  }
 })
 
 app.use('/api/admin/users', usersRouter)
