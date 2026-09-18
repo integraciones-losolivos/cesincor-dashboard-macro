@@ -61,7 +61,13 @@ const initialFilters = {
 }
 
 function getAvailableDateRange(rows) {
-  const currentYear = new Date().getFullYear()
+  const today = new Date()
+  const currentYear = today.getFullYear()
+  const todayKey = [
+    currentYear,
+    String(today.getMonth() + 1).padStart(2, '0'),
+    String(today.getDate()).padStart(2, '0'),
+  ].join('-')
   const dates = rows
     .map((row) => row.fecha)
     .filter((value) => {
@@ -73,10 +79,11 @@ function getAvailableDateRange(rows) {
       const candidate = new Date(year, month - 1, day)
       return (
         year >= 1900 &&
-        year <= currentYear + 1 &&
+        year <= currentYear &&
         candidate.getFullYear() === year &&
         candidate.getMonth() === month - 1 &&
-        candidate.getDate() === day
+        candidate.getDate() === day &&
+        value <= todayKey
       )
     })
     .sort()
@@ -85,14 +92,15 @@ function getAvailableDateRange(rows) {
   const latest = dates.at(-1)
   const [year, month] = latest.split('-').map(Number)
   const monthEnd = new Date(year, month, 0)
+  const monthEndKey = [
+    monthEnd.getFullYear(),
+    String(monthEnd.getMonth() + 1).padStart(2, '0'),
+    String(monthEnd.getDate()).padStart(2, '0'),
+  ].join('-')
 
   return {
     latestMonthStart: `${year}-${String(month).padStart(2, '0')}-01`,
-    latestMonthEnd: [
-      monthEnd.getFullYear(),
-      String(monthEnd.getMonth() + 1).padStart(2, '0'),
-      String(monthEnd.getDate()).padStart(2, '0'),
-    ].join('-'),
+    latestMonthEnd: monthEndKey > todayKey ? todayKey : monthEndKey,
   }
 }
 
@@ -379,14 +387,14 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
               <KpiCard title="Contratos activos" value={number(kpis.contratosActivos)} helper={`Promedio por contrato: ${money(kpis.valorPromedioContrato)}.`} icon={<ClipboardList className="size-6" strokeWidth={2.4} />} accent="blue" />
               <KpiCard title="Personas activas" value={number(kpis.personasActivas)} helper={`${number(kpis.totalTitulares)} titulares y ${number(kpis.totalBeneficiarios)} beneficiarios.`} icon={<UsersRound className="size-6" strokeWidth={2.4} />} accent="emerald" />
               <KpiCard
-                title={filters.fechaInicial || filters.fechaFinal ? 'Total contable registrado' : 'Total contable histórico'}
+                title={filters.fechaInicial || filters.fechaFinal ? 'Facturado Previsión' : 'Facturado histórico Previsión'}
                 value={isBillingLoading ? 'Consultando…' : billingError ? '—' : money(billingSummary?.totalFacturado || 0)}
                 helper={
                   billingError
                     ? billingError
                     : isBillingLoading
-                      ? 'Consultando movimientos registrados por fecha contable en SAP.'
-                      : `${number(billingSummary?.contratosFacturados || 0)} contratos en @OK1_EXE_FACT_OJDT · suma de U_LocTotal.`
+                      ? 'Consultando asientos por fecha contable en SAP.'
+                      : `${number(billingSummary?.asientosContables || 0)} asientos manuales · OJDT/JDT1 por RefDate.`
                 }
                 icon={<BadgeDollarSign className="size-6" strokeWidth={2.4} />}
                 accent="violet"
