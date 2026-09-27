@@ -33,6 +33,7 @@ import ChartCard from "../ChartCard.jsx";
 import CustomTooltip from "../CustomTooltip.jsx";
 import EmptyState from "../EmptyState.jsx";
 import KpiCard from "../KpiCard.jsx";
+import CommercialIncome from "./CommercialIncome.jsx";
 import IncomeFilters from "./IncomeFilters.jsx";
 
 export default function IncomeOverview({ active = true }) {
@@ -41,6 +42,7 @@ export default function IncomeOverview({ active = true }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [sectionView, setSectionView] = useState("general");
 
   useEffect(() => {
     if (!active) return undefined;
@@ -113,7 +115,16 @@ export default function IncomeOverview({ active = true }) {
         onRefresh={() => setRefreshKey((key) => key + 1)}
       />
 
-      <>
+      <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-2">
+        <SectionButton active={sectionView === "general"} onClick={() => setSectionView("general")}>
+          Indicadores generales
+        </SectionButton>
+        <SectionButton active={sectionView === "comercial"} onClick={() => setSectionView("comercial")}>
+          Gestión comercial · Responsables
+        </SectionButton>
+      </div>
+
+      {sectionView === "general" ? <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard
               title="Personas protegidas"
@@ -305,7 +316,7 @@ export default function IncomeOverview({ active = true }) {
               </div>
             </ChartCard>
           )}
-      </>
+      </> : <CommercialIncome rows={filteredRows} />}
     </div>
   );
 }
@@ -339,4 +350,8 @@ function ErrorState({ message, onRetry }) {
       </button>
     </section>
   );
+}
+
+function SectionButton({ active, onClick, children }) {
+  return <button type="button" onClick={onClick} className={`min-h-11 rounded-xl px-5 text-sm font-black transition ${active ? "bg-cyan-950 text-white shadow" : "text-slate-600 hover:bg-cyan-50"}`}>{children}</button>;
 }
