@@ -33,6 +33,7 @@ import ChartCard from "../ChartCard.jsx";
 import CustomTooltip from "../CustomTooltip.jsx";
 import EmptyState from "../EmptyState.jsx";
 import KpiCard from "../KpiCard.jsx";
+import AffiliateComposition from "./AffiliateComposition.jsx";
 import CommercialIncome from "./CommercialIncome.jsx";
 import IncomeFilters from "./IncomeFilters.jsx";
 
@@ -121,6 +122,15 @@ export default function IncomeOverview({ active = true }) {
         </SectionButton>
         <SectionButton active={sectionView === "comercial"} onClick={() => setSectionView("comercial")}>
           Gestión comercial · Responsables
+        </SectionButton>
+        <SectionButton
+          active={sectionView === "composicion"}
+          onClick={() => {
+            setSectionView("composicion");
+            setFilters((current) => ({ ...current, estado: "TODOS" }));
+          }}
+        >
+          Composición de afiliados
         </SectionButton>
       </div>
 
@@ -316,7 +326,7 @@ export default function IncomeOverview({ active = true }) {
               </div>
             </ChartCard>
           )}
-      </> : <CommercialIncome rows={filteredRows} />}
+      </> : sectionView === "comercial" ? <CommercialIncome rows={filteredRows} /> : <AffiliateComposition rows={rows} filters={filters} />}
     </div>
   );
 }

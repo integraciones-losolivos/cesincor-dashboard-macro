@@ -4,7 +4,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { fetchHomenajes } from './homenajesRepository.js'
 import { fetchPrevisionBillingSummary } from './previsionBillingRepository.js'
-import { fetchPrevisionIncomeRows } from './previsionIncomeRepository.js'
+import { buildIncomeAlertDetails, fetchPrevisionIncomeRows, toPublicIncomeRow } from './previsionIncomeRepository.js'
 import { fetchPrevisionRows } from './previsionRepository.js'
 import { fetchRetiros } from './retirosRepository.js'
 import { requireAuth, requireModule, supabaseAdmin } from './auth.js'
@@ -90,13 +90,40 @@ app.get('/api/prevision/ingresos', requireAuth, requireModule('prevision'), asyn
       to: String(request.query.to || ''),
       forceRefresh: String(request.query.refresh || '') === 'true',
     }
-    response.json({ rows: await fetchPrevisionIncomeRows(range) })
+    const rows = await fetchPrevisionIncomeRows(range)
+    response.json({ rows: rows.map(toPublicIncomeRow) })
   } catch (error) {
     console.error('[api/prevision/ingresos]', error)
     response.status(500).json({
       message: 'No fue posible consultar los ingresos de Previsión.',
       ...(process.env.NODE_ENV === 'development' ? { detail: error.message } : {}),
     })
+  }
+})
+
+app.get('/api/prevision/ingresos/alertas/:alerta', requireAuth, requireModule('prevision'), async (request, response) => {
+  const allowedAlerts = new Set([
+    'TITULAR_NO_ACTIVO', 'TITULAR_SIN_FACTURACION', 'INGRESO_POSTERIOR_CORTE',
+    'VIGENCIA_POSTERIOR_CORTE', 'NACIMIENTO_INVALIDO', 'NACIMIENTO_FUTURO', 'EDAD_MAYOR_120',
+  ])
+  const alerta = String(request.params.alerta || '')
+  if (!allowedAlerts.has(alerta)) {
+    response.status(400).json({ message: 'La alerta solicitada no es válida.' })
+    return
+  }
+  try {
+    const range = { from: String(request.query.from || ''), to: String(request.query.to || '') }
+    const filters = {
+      sede: String(request.query.sede || ''), plan: String(request.query.plan || ''),
+      convenio: String(request.query.convenio || ''), asesor: String(request.query.asesor || ''),
+      tipoAfiliado: String(request.query.tipoAfiliado || ''), parentesco: String(request.query.parentesco || ''),
+      estado: String(request.query.estado || ''), search: String(request.query.search || ''),
+    }
+    const rows = await fetchPrevisionIncomeRows(range)
+    response.json({ rows: buildIncomeAlertDetails(rows, alerta, filters) })
+  } catch (error) {
+    console.error('[api/prevision/ingresos/alertas]', error)
+    response.status(500).json({ message: 'No fue posible consultar el detalle de la alerta.' })
   }
 })
 

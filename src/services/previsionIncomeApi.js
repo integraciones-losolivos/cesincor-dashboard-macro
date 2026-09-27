@@ -5,7 +5,7 @@ const memoryCache = new Map()
 const DB_NAME = 'crystal-dashboard-cache'
 const STORE_NAME = 'prevision-income'
 
-function cacheKey(from, to) { return `v1:${from || 'all'}:${to || 'all'}` }
+function cacheKey(from, to) { return `v2:${from || 'all'}:${to || 'all'}` }
 
 function openCache() {
   if (typeof indexedDB === 'undefined') return Promise.resolve(null)
@@ -17,6 +17,22 @@ function openCache() {
     request.onsuccess = () => resolve(request.result)
     request.onerror = () => resolve(null)
   })
+}
+
+export async function fetchPrevisionIncomeAlertDetails(alerta, { from = '', to = '', ...filters } = {}) {
+  const search = new URLSearchParams()
+  if (from) search.set('from', from)
+  if (to) search.set('to', to)
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value && value !== 'TODOS') search.set(key, value)
+  })
+  const response = await fetchWithRetry(`/api/prevision/ingresos/alertas/${encodeURIComponent(alerta)}${search.size ? `?${search}` : ''}`, { timeoutMs: 30000 })
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}))
+    throw new Error(payload.message || 'No fue posible consultar el detalle de la alerta.')
+  }
+  const payload = await response.json()
+  return payload.rows || []
 }
 
 async function readPersistentCache(key) {
