@@ -36,6 +36,7 @@ import KpiCard from "../KpiCard.jsx";
 import AffiliateComposition from "./AffiliateComposition.jsx";
 import CommercialIncome from "./CommercialIncome.jsx";
 import IncomeFilters from "./IncomeFilters.jsx";
+import PlanSummary from "./PlanSummary.jsx";
 import SiteSummary from "./SiteSummary.jsx";
 
 export default function IncomeOverview({ active = true }) {
@@ -84,6 +85,10 @@ export default function IncomeOverview({ active = true }) {
   );
   const siteRows = useMemo(
     () => filterIncomeRows(rows, { ...filters, sede: "TODOS" }),
+    [rows, filters],
+  );
+  const planRows = useMemo(
+    () => filterIncomeRows(rows, { ...filters, plan: "TODOS" }),
     [rows, filters],
   );
   const summary = useMemo(
@@ -139,6 +144,9 @@ export default function IncomeOverview({ active = true }) {
         </SectionButton>
         <SectionButton active={sectionView === "sedes"} onClick={() => setSectionView("sedes")}>
           Resumen por sede
+        </SectionButton>
+        <SectionButton active={sectionView === "planes"} onClick={() => setSectionView("planes")}>
+          Resumen por planes
         </SectionButton>
       </div>
 
@@ -334,7 +342,7 @@ export default function IncomeOverview({ active = true }) {
               </div>
             </ChartCard>
           )}
-      </> : sectionView === "comercial" ? <CommercialIncome rows={filteredRows} /> : sectionView === "composicion" ? <AffiliateComposition rows={rows} filters={filters} /> : <SiteSummary rows={siteRows} selectedSite={filters.sede} onSelectSite={(sede) => setFilters((current) => ({ ...current, sede }))} />}
+      </> : sectionView === "comercial" ? <CommercialIncome rows={filteredRows} /> : sectionView === "composicion" ? <AffiliateComposition rows={rows} filters={filters} /> : sectionView === "sedes" ? <SiteSummary rows={siteRows} selectedSite={filters.sede} onSelectSite={(sede) => setFilters((current) => ({ ...current, sede }))} /> : <PlanSummary rows={planRows} selectedPlan={filters.plan} onSelectPlan={(plan) => setFilters((current) => ({ ...current, plan }))} />}
     </div>
   );
 }
