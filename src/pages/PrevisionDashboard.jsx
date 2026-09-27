@@ -9,6 +9,7 @@ import {
   LogOut,
   RefreshCw,
   ShieldCheck,
+  UserPlus,
   UsersRound,
 } from 'lucide-react'
 import {
@@ -28,6 +29,7 @@ import CustomTooltip from '../components/CustomTooltip.jsx'
 import EmptyState from '../components/EmptyState.jsx'
 import KpiCard from '../components/KpiCard.jsx'
 import PrevisionFilters from '../components/prevision/PrevisionFilters.jsx'
+import IncomeOverview from '../components/prevision/IncomeOverview.jsx'
 import RetirosDashboard from './RetirosDashboard.jsx'
 import { fetchPrevisionBillingSummary, fetchPrevisionRows } from '../services/previsionApi.js'
 import { checkApiHealth } from '../services/http.js'
@@ -105,6 +107,7 @@ function getAvailableDateRange(rows) {
 }
 
 const reportViews = [
+  { id: 'ingresos', label: 'Ingresos', icon: UserPlus },
   { id: 'activos', label: 'Activos', icon: UsersRound },
   { id: 'contratos', label: 'Contratos y planes', icon: ClipboardList },
   { id: 'valores', label: 'Valores', icon: BadgeDollarSign },
@@ -128,7 +131,7 @@ function mergeRows(current, incoming) {
 
 export default function PrevisionDashboard({ areaName = 'Prevision' }) {
   const [filters, setFilters] = useState(initialFilters)
-  const [activeView, setActiveView] = useState('activos')
+  const [activeView, setActiveView] = useState('ingresos')
   const [previsionRows, setPrevisionRows] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -139,7 +142,7 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
   const [billingError, setBillingError] = useState('')
   const [isBillingLoading, setIsBillingLoading] = useState(false)
   const [billingRefresh, setBillingRefresh] = useState(0)
-  const [visitedViews, setVisitedViews] = useState(() => new Set(['activos']))
+  const [visitedViews, setVisitedViews] = useState(() => new Set(['ingresos']))
   const hasLoadedData = useRef(false)
   const lastLoadedAt = useRef(0)
   const activeRequests = useRef(new Map())
@@ -339,12 +342,17 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
 
       <section className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
         <ReportTabs activeView={activeView} setActiveView={selectView} />
+        {visitedViews.has('ingresos') && (
+          <div hidden={activeView !== 'ingresos'}>
+            <IncomeOverview active={activeView === 'ingresos'} />
+          </div>
+        )}
         {visitedViews.has('retiros') && (
           <div hidden={activeView !== 'retiros'}>
             <RetirosDashboard embedded active={activeView === 'retiros'} />
           </div>
         )}
-        {activeView !== 'retiros' && (isLoading ? (
+        {activeView !== 'retiros' && activeView !== 'ingresos' && (isLoading ? (
           <PrevisionLoadingState />
         ) : loadError && !previsionRows.length ? (
           <section className="card-shadow rounded-[2rem] border border-amber-200 bg-white px-6 py-10 text-center sm:px-10">
