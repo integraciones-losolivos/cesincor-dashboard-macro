@@ -80,4 +80,3 @@ function AlertDetail({ alert, rows, loading, error }) {
 
 function Legend({ data }) { return <div className="space-y-2">{data.map((item) => <div key={item.name} className="flex min-w-52 items-center justify-between gap-5 rounded-xl bg-slate-50 px-4 py-3"><span className="flex items-center gap-2 text-sm font-bold text-slate-600"><span className="size-2.5 rounded-full" style={{ backgroundColor: item.color }} />{item.name}</span><strong>{number(item.value)}</strong></div>)}</div> }
 function formatAge(value) { return Number.isFinite(value) ? `${value.toLocaleString('es-CO', { maximumFractionDigits: 1 })} años` : 'Sin datos' }
-
