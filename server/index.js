@@ -4,6 +4,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { fetchHomenajes } from './homenajesRepository.js'
 import { fetchPrevisionBillingSummary } from './previsionBillingRepository.js'
+import { fetchPrevisionIncomeRows } from './previsionIncomeRepository.js'
 import { fetchPrevisionRows } from './previsionRepository.js'
 import { fetchRetiros } from './retirosRepository.js'
 import { requireAuth, requireModule, supabaseAdmin } from './auth.js'
@@ -77,6 +78,23 @@ app.get('/api/prevision/facturacion', requireAuth, requireModule('prevision'), a
     console.error('[api/prevision/facturacion]', error)
     response.status(500).json({
       message: 'No fue posible consultar la facturación de Previsión.',
+      ...(process.env.NODE_ENV === 'development' ? { detail: error.message } : {}),
+    })
+  }
+})
+
+app.get('/api/prevision/ingresos', requireAuth, requireModule('prevision'), async (request, response) => {
+  try {
+    const range = {
+      from: String(request.query.from || ''),
+      to: String(request.query.to || ''),
+      forceRefresh: String(request.query.refresh || '') === 'true',
+    }
+    response.json({ rows: await fetchPrevisionIncomeRows(range) })
+  } catch (error) {
+    console.error('[api/prevision/ingresos]', error)
+    response.status(500).json({
+      message: 'No fue posible consultar los ingresos de Previsión.',
       ...(process.env.NODE_ENV === 'development' ? { detail: error.message } : {}),
     })
   }

@@ -34,7 +34,10 @@ consumidores y comprobar que el cambio sea compatible.
 - `src/components/prevision/`: componentes visuales y filtros propios del
   módulo.
 - `src/services/previsionApi.js`: cliente para los endpoints de Previsión.
+- `src/services/previsionIncomeApi.js`: cliente y caché persistente de la
+  interfaz general de Ingresos.
 - `src/utils/prevision.js`: filtros, agrupaciones, KPI y resúmenes derivados.
+- `src/utils/previsionIncome.js`: filtros y métricas de personas protegidas.
 - `src/App.jsx`: registro, navegación y carga diferida del módulo.
 - `src/config/accessModules.js`: definición del permiso `prevision`.
 
@@ -45,6 +48,9 @@ consumidores y comprobar que el cambio sea compatible.
 - `server/previsionRepository.js`: acceso a SAP HANA y caché de resultados.
 - `server/previsionBillingSql.js`: consulta agregada de facturación.
 - `server/previsionBillingRepository.js`: acceso al resumen de facturación.
+- `server/previsionIncomeSql.js`: consulta de contratos, personas y
+  facturación vigente para Ingresos.
+- `server/previsionIncomeRepository.js`: normalización y caché de Ingresos.
 - `server/retirosRepository.js` y archivos relacionados: datos de la vista de
   retiros, protegida por el permiso de Previsión.
 - `server/auth.js`: autorización del módulo; no debe debilitarse ni omitirse.
@@ -63,6 +69,7 @@ consumidores y comprobar que el cambio sea compatible.
 
 - `GET /api/prevision`
 - `GET /api/prevision/facturacion`
+- `GET /api/prevision/ingresos`
 - `GET /api/retiros`
 
 Los tres endpoints requieren un JWT válido y el permiso `prevision`. Los
@@ -123,6 +130,8 @@ node --check server/previsionSql.js
 node --check server/previsionRepository.js
 node --check server/previsionBillingSql.js
 node --check server/previsionBillingRepository.js
+node --check server/previsionIncomeSql.js
+node --check server/previsionIncomeRepository.js
 ```
 
 Además, cuando corresponda:
