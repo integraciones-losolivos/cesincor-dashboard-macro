@@ -85,6 +85,53 @@ export function buildIncomeComposition(summary) {
   ].filter((item) => item.value > 0)
 }
 
+export function buildCommercialPortfolio(rows) {
+  const totalProtected = new Set(rows.map((row) => row.id)).size
+  const groups = new Map()
+  rows.forEach((row) => {
+    const name = text(row.asesor) || 'SIN RESPONSABLE'
+    if (!groups.has(name)) groups.set(name, [])
+    groups.get(name).push(row)
+  })
+
+  return [...groups.entries()].map(([name, groupRows]) => {
+    const summary = buildIncomeSummary(groupRows)
+    return {
+      name,
+      ...summary,
+      convenios: new Set(groupRows.map((row) => row.convenio).filter(Boolean)).size,
+      planes: new Set(groupRows.map((row) => row.plan).filter(Boolean)).size,
+      sedes: new Set(groupRows.map((row) => row.sede).filter(Boolean)).size,
+      participacion: totalProtected ? (summary.vidas / totalProtected) * 100 : 0,
+      rows: groupRows,
+    }
+  })
+}
+
+export function buildCommercialKpis(rows) {
+  const portfolio = buildCommercialPortfolio(rows)
+  return {
+    responsables: portfolio.filter((item) => item.contratos > 0).length,
+    convenios: new Set(rows.map((row) => row.convenio).filter(Boolean)).size,
+    planes: new Set(rows.map((row) => row.plan).filter(Boolean)).size,
+    sedes: new Set(rows.map((row) => row.sede).filter(Boolean)).size,
+    ...buildIncomeSummary(rows),
+  }
+}
+
+export function buildDimensionPortfolio(rows, key, limit = 10) {
+  const groups = new Map()
+  rows.forEach((row) => {
+    const name = text(row[key]) || 'SIN DEFINIR'
+    if (!groups.has(name)) groups.set(name, [])
+    groups.get(name).push(row)
+  })
+  return [...groups.entries()]
+    .map(([name, groupRows]) => ({ name, ...buildIncomeSummary(groupRows) }))
+    .sort((a, b) => b.contratos - a.contratos || b.vidas - a.vidas)
+    .slice(0, limit)
+}
+
 export function groupIncomeBy(rows, key, limit = 8) {
   const groups = new Map()
   rows.forEach((row) => {
