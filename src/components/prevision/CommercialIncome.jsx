@@ -76,4 +76,3 @@ function DarkChart({ title, children }) { return <div className="rounded-2xl bg-
 function HorizontalBars({ data, dataKey, name, color = '#0f766e' }) { return <div className="mt-3 h-64"><ResponsiveContainer width="100%" height="100%"><BarChart data={data} layout="vertical" margin={{ left: 12, right: 16 }}><CartesianGrid strokeDasharray="3 3" horizontal={false} /><XAxis type="number" tickFormatter={number} /><YAxis dataKey="name" type="category" width={115} tick={{ fontSize: 10 }} /><Tooltip content={<CustomTooltip />} /><Bar dataKey={dataKey} name={name} fill={color} radius={[0, 7, 7, 0]} /></BarChart></ResponsiveContainer></div> }
 function decimal(value) { return Number(value || 0).toLocaleString('es-CO', { maximumFractionDigits: 1 }) }
 function compactMoney(value) { return new Intl.NumberFormat('es-CO', { notation: 'compact', maximumFractionDigits: 1 }).format(value || 0) }
-
