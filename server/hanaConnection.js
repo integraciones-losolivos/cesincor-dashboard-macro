@@ -30,22 +30,22 @@ function connectOnce() {
   })
 }
 
-export async function connectHana() {
+export async function connectHana({ attempts = 3, retryDelayMs = 1500 } = {}) {
   assertHanaConfig()
 
   let lastError
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
     try {
       return await connectOnce()
     } catch (error) {
       lastError = error
-      if (attempt < 3) {
-        await new Promise((resolve) => setTimeout(resolve, attempt * 1500))
+      if (attempt < attempts) {
+        await new Promise((resolve) => setTimeout(resolve, attempt * retryDelayMs))
       }
     }
   }
 
-  throw new Error(`SAP HANA no respondió después de 3 intentos. ${lastError?.message || ''}`.trim())
+  throw new Error(`SAP HANA no respondió después de ${attempts} intentos. ${lastError?.message || ''}`.trim())
 }
 
 export function executeQuery(connection, sql) {
