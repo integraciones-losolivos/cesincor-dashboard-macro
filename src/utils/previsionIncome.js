@@ -158,6 +158,28 @@ export function filterIncomeProfileRows(rows, filters) {
   })
 }
 
+export function buildSitePortfolio(rows) {
+  const totalProtected = new Set(rows.map((row) => row.id)).size
+  const groups = new Map()
+  rows.forEach((row) => {
+    const name = text(row.sede) || 'SIN SEDE'
+    if (!groups.has(name)) groups.set(name, [])
+    groups.get(name).push(row)
+  })
+
+  return [...groups.entries()]
+    .map(([name, groupRows]) => {
+      const summary = buildIncomeSummary(groupRows)
+      return {
+        name,
+        ...summary,
+        participacion: totalProtected ? (summary.vidas / totalProtected) * 100 : 0,
+        rows: groupRows,
+      }
+    })
+    .sort((a, b) => b.vidas - a.vidas || a.name.localeCompare(b.name, 'es'))
+}
+
 export function buildAffiliateProfile(rows) {
   const active = rows.filter((row) => row.estado === 'ACTIVO')
   const ages = active.map((row) => row.edad).filter((value) => Number.isFinite(value) && value >= 0 && value <= 120).sort((a, b) => a - b)
