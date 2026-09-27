@@ -70,6 +70,8 @@ consumidores y comprobar que el cambio sea compatible.
 - `GET /api/prevision`
 - `GET /api/prevision/facturacion`
 - `GET /api/prevision/ingresos`
+- `GET /api/prevision/ingresos/alertas/:alerta` para consultar bajo demanda el
+  detalle identificable de una alerta de calidad.
 - `GET /api/retiros`
 
 Los tres endpoints requieren un JWT válido y el permiso `prevision`. Los

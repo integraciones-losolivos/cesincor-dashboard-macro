@@ -132,6 +132,63 @@ export function buildDimensionPortfolio(rows, key, limit = 10) {
     .slice(0, limit)
 }
 
+export const incomeQualityAlerts = [
+  { id: 'TITULAR_NO_ACTIVO', label: 'Personas activas bajo contrato con titular no activo' },
+  { id: 'TITULAR_SIN_FACTURACION', label: 'Titulares activos con valor facturado igual a cero' },
+  { id: 'INGRESO_POSTERIOR_CORTE', label: 'Fecha de ingreso posterior al corte' },
+  { id: 'VIGENCIA_POSTERIOR_CORTE', label: 'Fecha de inicio de vigencia posterior al corte' },
+  { id: 'NACIMIENTO_INVALIDO', label: 'Fecha de nacimiento vacía o no interpretable' },
+  { id: 'NACIMIENTO_FUTURO', label: 'Fecha de nacimiento futura' },
+  { id: 'EDAD_MAYOR_120', label: 'Edad mayor a 120 años' },
+]
+
+export function filterIncomeProfileRows(rows, filters) {
+  const search = upper(filters.search)
+  const matches = (value, selected) => selected === 'TODOS' || text(value) === selected
+  return rows.filter((row) => {
+    if (search && ![row.contrato, row.plan, row.convenio, row.sede, row.asesor, row.parentesco]
+      .some((value) => upper(value).includes(search))) return false
+    return matches(row.sede, filters.sede)
+      && matches(row.plan, filters.plan)
+      && matches(row.convenio, filters.convenio)
+      && matches(row.asesor, filters.asesor)
+      && matches(row.categoriaProtegido, filters.tipoAfiliado)
+      && matches(row.parentesco, filters.parentesco)
+      && matches(row.estado, filters.estado)
+  })
+}
+
+export function buildAffiliateProfile(rows) {
+  const active = rows.filter((row) => row.estado === 'ACTIVO')
+  const ages = active.map((row) => row.edad).filter((value) => Number.isFinite(value) && value >= 0 && value <= 120).sort((a, b) => a - b)
+  const middle = Math.floor(ages.length / 2)
+  const median = ages.length ? (ages.length % 2 ? ages[middle] : (ages[middle - 1] + ages[middle]) / 2) : null
+  const average = ages.length ? ages.reduce((sum, age) => sum + age, 0) / ages.length : null
+  const ranges = [
+    { name: '0–5', min: 0, max: 5 }, { name: '6–12', min: 6, max: 12 },
+    { name: '13–17', min: 13, max: 17 }, { name: '18–29', min: 18, max: 29 },
+    { name: '30–44', min: 30, max: 44 }, { name: '45–59', min: 45, max: 59 },
+    { name: '60–74', min: 60, max: 74 }, { name: '75+', min: 75, max: 120 },
+  ].map((range) => ({ name: range.name, personas: ages.filter((age) => age >= range.min && age <= range.max).length }))
+  const statuses = [...rows.reduce((map, row) => map.set(row.estado, (map.get(row.estado) || 0) + 1), new Map())]
+    .map(([name, value]) => ({ name, value }))
+  const relationships = groupIncomeBy(active, 'parentesco', Number.MAX_SAFE_INTEGER)
+  const ageByType = [...active.reduce((map, row) => {
+    if (!Number.isFinite(row.edad) || row.edad < 0 || row.edad > 120) return map
+    const current = map.get(row.categoriaProtegido) || { total: 0, count: 0 }
+    current.total += row.edad
+    current.count += 1
+    map.set(row.categoriaProtegido, current)
+    return map
+  }, new Map())].map(([name, values]) => ({ name, edad: values.total / values.count }))
+  const alerts = incomeQualityAlerts.map((alert) => ({ ...alert, count: rows.filter((row) => row.alertas?.includes(alert.id)).length }))
+
+  return {
+    average, median, parentescos: new Set(active.map((row) => row.parentesco).filter((value) => value && value !== 'N/A')).size,
+    noActivos: rows.length - active.length, active, ranges, statuses, relationships, ageByType, alerts,
+  }
+}
+
 export function groupIncomeBy(rows, key, limit = 8) {
   const groups = new Map()
   rows.forEach((row) => {
