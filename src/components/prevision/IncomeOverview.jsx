@@ -36,6 +36,7 @@ import KpiCard from "../KpiCard.jsx";
 import AffiliateComposition from "./AffiliateComposition.jsx";
 import CommercialIncome from "./CommercialIncome.jsx";
 import IncomeFilters from "./IncomeFilters.jsx";
+import SiteSummary from "./SiteSummary.jsx";
 
 export default function IncomeOverview({ active = true }) {
   const [rows, setRows] = useState([]);
@@ -79,6 +80,10 @@ export default function IncomeOverview({ active = true }) {
   }, [filters.asesor, rows]);
   const filteredRows = useMemo(
     () => filterIncomeRows(rows, filters),
+    [rows, filters],
+  );
+  const siteRows = useMemo(
+    () => filterIncomeRows(rows, { ...filters, sede: "TODOS" }),
     [rows, filters],
   );
   const summary = useMemo(
@@ -131,6 +136,9 @@ export default function IncomeOverview({ active = true }) {
           }}
         >
           Composición de afiliados
+        </SectionButton>
+        <SectionButton active={sectionView === "sedes"} onClick={() => setSectionView("sedes")}>
+          Resumen por sede
         </SectionButton>
       </div>
 
@@ -326,7 +334,7 @@ export default function IncomeOverview({ active = true }) {
               </div>
             </ChartCard>
           )}
-      </> : sectionView === "comercial" ? <CommercialIncome rows={filteredRows} /> : <AffiliateComposition rows={rows} filters={filters} />}
+      </> : sectionView === "comercial" ? <CommercialIncome rows={filteredRows} /> : sectionView === "composicion" ? <AffiliateComposition rows={rows} filters={filters} /> : <SiteSummary rows={siteRows} selectedSite={filters.sede} onSelectSite={(sede) => setFilters((current) => ({ ...current, sede }))} />}
     </div>
   );
 }
