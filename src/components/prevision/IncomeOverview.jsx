@@ -84,6 +84,10 @@ export default function IncomeOverview({ active = true }) {
     () => filterIncomeRows(rows, filters),
     [rows, filters],
   );
+  const advisorRows = useMemo(
+    () => filterIncomeRows(rows, { ...filters, asesor: "TODOS" }),
+    [rows, filters],
+  );
   const siteRows = useMemo(
     () => filterIncomeRows(rows, { ...filters, sede: "TODOS" }),
     [rows, filters],
@@ -136,7 +140,7 @@ export default function IncomeOverview({ active = true }) {
           Indicadores generales
         </SectionButton>
         <SectionButton active={sectionView === "comercial"} onClick={() => setSectionView("comercial")}>
-          Gestión comercial · Responsables
+          Resumen por asesor
         </SectionButton>
         <SectionButton
           active={sectionView === "composicion"}
@@ -350,7 +354,7 @@ export default function IncomeOverview({ active = true }) {
               </div>
             </ChartCard>
           )}
-      </> : sectionView === "comercial" ? <CommercialIncome rows={filteredRows} /> : sectionView === "composicion" ? <AffiliateComposition rows={rows} filters={filters} /> : sectionView === "sedes" ? <SiteSummary rows={siteRows} selectedSite={filters.sede} onSelectSite={(sede) => setFilters((current) => ({ ...current, sede }))} /> : sectionView === "planes" ? <PlanSummary rows={planRows} selectedPlan={filters.plan} onSelectPlan={(plan) => setFilters((current) => ({ ...current, plan }))} /> : <ConventionSummary rows={conventionRows} selectedConvention={filters.convenio} onSelectConvention={(convenio) => setFilters((current) => ({ ...current, convenio }))} />}
+      </> : sectionView === "comercial" ? <CommercialIncome rows={advisorRows} selectedAdvisor={filters.asesor} onSelectAdvisor={(asesor) => setFilters((current) => ({ ...current, asesor }))} /> : sectionView === "composicion" ? <AffiliateComposition rows={rows} filters={filters} /> : sectionView === "sedes" ? <SiteSummary rows={siteRows} selectedSite={filters.sede} onSelectSite={(sede) => setFilters((current) => ({ ...current, sede }))} /> : sectionView === "planes" ? <PlanSummary rows={planRows} selectedPlan={filters.plan} onSelectPlan={(plan) => setFilters((current) => ({ ...current, plan }))} /> : <ConventionSummary rows={conventionRows} selectedConvention={filters.convenio} onSelectConvention={(convenio) => setFilters((current) => ({ ...current, convenio }))} />}
     </div>
   );
 }
