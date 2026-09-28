@@ -39,6 +39,7 @@ import CommercialPortfolio from "./CommercialPortfolio.jsx";
 import ConventionSummary from "./ConventionSummary.jsx";
 import IncomeFilters from "./IncomeFilters.jsx";
 import PlanSummary from "./PlanSummary.jsx";
+import RelationshipSummary from "./RelationshipSummary.jsx";
 import SiteSummary from "./SiteSummary.jsx";
 
 export default function IncomeOverview({ active = true }) {
@@ -99,6 +100,10 @@ export default function IncomeOverview({ active = true }) {
   );
   const conventionRows = useMemo(
     () => filterIncomeRows(rows, { ...filters, convenio: "TODOS" }),
+    [rows, filters],
+  );
+  const relationshipRows = useMemo(
+    () => filterIncomeRows(rows, { ...filters, parentesco: "TODOS" }),
     [rows, filters],
   );
   const summary = useMemo(
@@ -163,6 +168,9 @@ export default function IncomeOverview({ active = true }) {
         </SectionButton>
         <SectionButton active={sectionView === "convenios"} onClick={() => setSectionView("convenios")}>
           Resumen por convenios
+        </SectionButton>
+        <SectionButton active={sectionView === "parentescos"} onClick={() => setSectionView("parentescos")}>
+          Resumen por parentescos
         </SectionButton>
       </div>
 
@@ -358,7 +366,7 @@ export default function IncomeOverview({ active = true }) {
               </div>
             </ChartCard>
           )}
-      </> : sectionView === "comercial" ? <CommercialPortfolio rows={filteredRows} /> : sectionView === "asesores" ? <CommercialIncome rows={advisorRows} selectedAdvisor={filters.asesor} onSelectAdvisor={(asesor) => setFilters((current) => ({ ...current, asesor }))} /> : sectionView === "composicion" ? <AffiliateComposition rows={rows} filters={filters} /> : sectionView === "sedes" ? <SiteSummary rows={siteRows} selectedSite={filters.sede} onSelectSite={(sede) => setFilters((current) => ({ ...current, sede }))} /> : sectionView === "planes" ? <PlanSummary rows={planRows} selectedPlan={filters.plan} onSelectPlan={(plan) => setFilters((current) => ({ ...current, plan }))} /> : <ConventionSummary rows={conventionRows} selectedConvention={filters.convenio} onSelectConvention={(convenio) => setFilters((current) => ({ ...current, convenio }))} />}
+      </> : sectionView === "comercial" ? <CommercialPortfolio rows={filteredRows} /> : sectionView === "asesores" ? <CommercialIncome rows={advisorRows} selectedAdvisor={filters.asesor} onSelectAdvisor={(asesor) => setFilters((current) => ({ ...current, asesor }))} /> : sectionView === "composicion" ? <AffiliateComposition rows={rows} filters={filters} /> : sectionView === "sedes" ? <SiteSummary rows={siteRows} selectedSite={filters.sede} onSelectSite={(sede) => setFilters((current) => ({ ...current, sede }))} /> : sectionView === "planes" ? <PlanSummary rows={planRows} selectedPlan={filters.plan} onSelectPlan={(plan) => setFilters((current) => ({ ...current, plan }))} /> : sectionView === "convenios" ? <ConventionSummary rows={conventionRows} selectedConvention={filters.convenio} onSelectConvention={(convenio) => setFilters((current) => ({ ...current, convenio }))} /> : <RelationshipSummary rows={relationshipRows} selectedRelationship={filters.parentesco} onSelectRelationship={(parentesco) => setFilters((current) => ({ ...current, parentesco }))} />}
     </div>
   );
 }

@@ -142,6 +142,45 @@ export const incomeQualityAlerts = [
   { id: 'EDAD_MAYOR_120', label: 'Edad mayor a 120 años' },
 ]
 
+export const incomeAgeRanges = [
+  { name: '0–5', min: 0, max: 5 }, { name: '6–12', min: 6, max: 12 },
+  { name: '13–17', min: 13, max: 17 }, { name: '18–29', min: 18, max: 29 },
+  { name: '30–44', min: 30, max: 44 }, { name: '45–59', min: 45, max: 59 },
+  { name: '60–74', min: 60, max: 74 }, { name: '75+', min: 75, max: 120 },
+]
+
+export function buildAgeRangeDistribution(rows) {
+  const ages = rows.map((row) => row.edad).filter((value) => Number.isFinite(value) && value >= 0 && value <= 120)
+  return incomeAgeRanges.map((range) => ({ name: range.name, personas: ages.filter((age) => age >= range.min && age <= range.max).length }))
+}
+
+export function buildRelationshipPortfolio(rows) {
+  const totalProtected = new Set(rows.map((row) => row.id)).size
+  const groups = new Map()
+  rows.forEach((row) => {
+    const rawName = text(row.parentesco)
+    const name = !rawName || rawName === 'N/A' ? 'SIN DEFINIR' : rawName
+    if (!groups.has(name)) groups.set(name, [])
+    groups.get(name).push(row)
+  })
+
+  return [...groups.entries()].map(([name, groupRows]) => {
+    const people = [...new Map(groupRows.map((row) => [row.id, row])).values()]
+    const ages = people.map((row) => row.edad).filter((value) => Number.isFinite(value) && value >= 0 && value <= 120).sort((a, b) => a - b)
+    const middle = Math.floor(ages.length / 2)
+    const edadMediana = ages.length ? (ages.length % 2 ? ages[middle] : (ages[middle - 1] + ages[middle]) / 2) : null
+    return {
+      name,
+      vidas: people.length,
+      contratos: new Set(people.map((row) => row.contrato).filter(Boolean)).size,
+      participacion: totalProtected ? (people.length / totalProtected) * 100 : 0,
+      edadPromedio: ages.length ? ages.reduce((sum, age) => sum + age, 0) / ages.length : null,
+      edadMediana,
+      rows: people,
+    }
+  }).sort((a, b) => b.vidas - a.vidas || a.name.localeCompare(b.name, 'es'))
+}
+
 export function filterIncomeProfileRows(rows, filters) {
   const search = upper(filters.search)
   const matches = (value, selected) => selected === 'TODOS' || text(value) === selected
@@ -230,12 +269,7 @@ export function buildAffiliateProfile(rows) {
   const middle = Math.floor(ages.length / 2)
   const median = ages.length ? (ages.length % 2 ? ages[middle] : (ages[middle - 1] + ages[middle]) / 2) : null
   const average = ages.length ? ages.reduce((sum, age) => sum + age, 0) / ages.length : null
-  const ranges = [
-    { name: '0–5', min: 0, max: 5 }, { name: '6–12', min: 6, max: 12 },
-    { name: '13–17', min: 13, max: 17 }, { name: '18–29', min: 18, max: 29 },
-    { name: '30–44', min: 30, max: 44 }, { name: '45–59', min: 45, max: 59 },
-    { name: '60–74', min: 60, max: 74 }, { name: '75+', min: 75, max: 120 },
-  ].map((range) => ({ name: range.name, personas: ages.filter((age) => age >= range.min && age <= range.max).length }))
+  const ranges = buildAgeRangeDistribution(active)
   const statuses = [...rows.reduce((map, row) => map.set(row.estado, (map.get(row.estado) || 0) + 1), new Map())]
     .map(([name, value]) => ({ name, value }))
   const relationships = groupIncomeBy(active, 'parentesco', Number.MAX_SAFE_INTEGER)
