@@ -90,8 +90,8 @@ export default function RetirosDashboard({ areaName = 'Retiros', embedded = fals
       {loading ? <div className="grid min-h-72 place-items-center rounded-3xl bg-white font-black text-slate-600">Consultando retiros…</div> : error && !rows.length ? <div className="rounded-3xl bg-white p-8 text-center text-rose-700">{error}</div> : !filtered.length ? <EmptyState /> : activeView === 'evolucion' ? <RetirosEvolution rows={filtered} from={filters.fechaInicial} to={filters.fechaFinal} /> : <>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard title="Contratos retirados" value={number(kpis.contratos)} helper="Contratos únicos cancelados en el periodo." icon={<ClipboardX className="size-6" />} accent="rose" />
-          <KpiCard title="Adicionales retirados" value={number(kpis.adicionales)} helper="Registros A y M retirados." icon={<UserMinus className="size-6" />} accent="orange" />
-          <KpiCard title="Mascotas retiradas" value={number(kpis.mascotas)} helper={`${percent(kpis.participacionMascotas)} del total de retiros.`} icon={<PawPrint className="size-6" />} accent="violet" />
+          <KpiCard title="Adicionales personas" value={number(kpis.adicionales)} helper="Personas adicionales A y M retiradas." icon={<UserMinus className="size-6" />} accent="orange" />
+          <KpiCard title="Adicionales mascotas" value={number(kpis.mascotas)} helper={`${percent(kpis.participacionMascotas)} del total de retiros.`} icon={<PawPrint className="size-6" />} accent="violet" />
           <KpiCard title="Total de retiros" value={number(kpis.total)} helper="Contratos únicos + adicionales + mascotas." icon={<LogOut className="size-6" />} accent="blue" />
         </div>
         <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
@@ -99,7 +99,7 @@ export default function RetirosDashboard({ areaName = 'Retiros', embedded = fals
           <ChartCard title="Retiros por sede y SubUEN" subtitle="Top 10 concentraciones del periodo." accent="orange"><Bars data={bySede} label={(item) => `${item.name} · ${item.subuen}`} /></ChartCard>
         </div>
         <div className="grid gap-6 xl:grid-cols-2"><ChartCard title="Planes con más retiros" subtitle="Top 8 por plan exequial." accent="violet"><Bars data={byPlan} /></ChartCard><ChartCard title="Asesores con más retiros" subtitle="Resumen Top 8; el análisis detallado se desarrollará aparte." accent="blue"><Bars data={byAdvisor} color="#2563eb" /></ChartCard></div>
-        <ChartCard title="Mascotas retiradas" subtitle={`Evolución mensual de ${number(kpis.mascotas)} registros P y D (${percent(kpis.participacionMascotas)} del total).`} accent="orange"><div className="h-72"><ResponsiveContainer width="100%" height="100%"><BarChart data={petTrend}><CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" vertical={false} /><XAxis dataKey="name" /><YAxis allowDecimals={false} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="cantidad" name="Mascotas" fill="#7c3aed" radius={[9, 9, 0, 0]} /></BarChart></ResponsiveContainer></div></ChartCard>
+        <ChartCard title="Adicionales mascotas retiradas" subtitle={`Evolución mensual de ${number(kpis.mascotas)} registros P y D (${percent(kpis.participacionMascotas)} del total).`} accent="orange"><div className="h-72"><ResponsiveContainer width="100%" height="100%"><BarChart data={petTrend}><CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" vertical={false} /><XAxis dataKey="name" /><YAxis allowDecimals={false} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="cantidad" name="Adicionales mascotas" fill="#7c3aed" radius={[9, 9, 0, 0]} /></BarChart></ResponsiveContainer></div></ChartCard>
         <RetirosTable rows={filtered} />
       </>}
     </section>

@@ -10,8 +10,8 @@ import { buildRetirosKpis, buildRetirosMonthly } from '../../utils/retiros.js'
 const channels = [
   ['empresariales', 'Empresariales', '#0f766e'],
   ['independientes', 'Independientes', '#2563eb'],
-  ['adicionales', 'Adicionales', '#ea580c'],
-  ['mascotas', 'Mascotas', '#7c3aed'],
+  ['adicionales', 'Adicionales personas', '#ea580c'],
+  ['mascotas', 'Adicionales mascotas', '#7c3aed'],
 ]
 
 function signed(value) { return value === null || value === undefined ? '—' : `${value > 0 ? '+' : ''}${number(value)}` }
@@ -38,8 +38,8 @@ export default function RetirosEvolution({ rows, from, to }) {
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
       <KpiCard title="Total de retiros" value={number(kpis.total)} helper={selectedMonth ? 'Total del mes seleccionado.' : 'Total del periodo filtrado.'} icon={<Sigma className="size-6" />} accent="rose" />
       <KpiCard title="Contratos retirados" value={number(kpis.contratos)} helper="Número de contrato único." icon={<ClipboardX className="size-6" />} accent="blue" />
-      <KpiCard title="Adicionales retirados" value={number(kpis.adicionales)} helper="Registros A y M." icon={<UserMinus className="size-6" />} accent="orange" />
-      <KpiCard title="Mascotas retiradas" value={number(kpis.mascotas)} helper={`${percent(kpis.participacionMascotas)} del total visible.`} icon={<PawPrint className="size-6" />} accent="violet" />
+      <KpiCard title="Adicionales personas" value={number(kpis.adicionales)} helper="Personas adicionales A y M." icon={<UserMinus className="size-6" />} accent="orange" />
+      <KpiCard title="Adicionales mascotas" value={number(kpis.mascotas)} helper={`${percent(kpis.participacionMascotas)} del total visible.`} icon={<PawPrint className="size-6" />} accent="violet" />
       <KpiCard title="Promedio mensual" value={number(Math.round(average))} helper={peak ? `Pico: ${monthLabel(`${peak.key}-01`)} (${number(peak.total)}).` : 'Sin meses disponibles.'} icon={<CalendarRange className="size-6" />} accent="emerald" />
     </div>
 
@@ -59,7 +59,7 @@ export default function RetirosEvolution({ rows, from, to }) {
 }
 
 function MonthlyTable({ rows, selectedMonth, onSelect }) {
-  return <ChartCard title="Tabla de evolución" subtitle="Resumen mensual bajo los filtros aplicados."><div className="overflow-x-auto"><table className="min-w-full whitespace-nowrap text-left text-sm"><thead><tr className="border-b text-[11px] uppercase tracking-[.11em] text-slate-400">{['Periodo', 'Contratos', 'Adicionales', 'Mascotas', 'Empresariales', 'Independientes', 'Total', 'Variación', '% variación'].map((head) => <th key={head} className="px-3 py-3">{head}</th>)}</tr></thead><tbody>{rows.map((row) => <tr key={row.key} onClick={() => onSelect(selectedMonth === row.key ? '' : row.key)} className={`cursor-pointer border-b border-slate-100 transition hover:bg-rose-50 ${selectedMonth === row.key ? 'bg-rose-50' : ''}`}><td className="px-3 py-3 font-black">{monthLabel(`${row.key}-01`)}</td><td className="px-3 py-3">{number(row.contratos)}</td><td className="px-3 py-3">{number(row.adicionales)}</td><td className="px-3 py-3">{number(row.mascotas)}</td><td className="px-3 py-3">{number(row.empresariales)}</td><td className="px-3 py-3">{number(row.independientes)}</td><td className="px-3 py-3 font-black">{number(row.total)}</td><td className="px-3 py-3">{signed(row.variacion)}</td><td className="px-3 py-3">{row.variacionPorcentual === null ? '—' : percent(row.variacionPorcentual)}</td></tr>)}</tbody></table></div></ChartCard>
+  return <ChartCard title="Tabla de evolución" subtitle="Resumen mensual bajo los filtros aplicados."><div className="overflow-x-auto"><table className="min-w-full whitespace-nowrap text-left text-sm"><thead><tr className="border-b text-[11px] uppercase tracking-[.11em] text-slate-400">{['Periodo', 'Contratos', 'Adicionales personas', 'Adicionales mascotas', 'Empresariales', 'Independientes', 'Total', 'Variación', '% variación'].map((head) => <th key={head} className="px-3 py-3">{head}</th>)}</tr></thead><tbody>{rows.map((row) => <tr key={row.key} onClick={() => onSelect(selectedMonth === row.key ? '' : row.key)} className={`cursor-pointer border-b border-slate-100 transition hover:bg-rose-50 ${selectedMonth === row.key ? 'bg-rose-50' : ''}`}><td className="px-3 py-3 font-black">{monthLabel(`${row.key}-01`)}</td><td className="px-3 py-3">{number(row.contratos)}</td><td className="px-3 py-3">{number(row.adicionales)}</td><td className="px-3 py-3">{number(row.mascotas)}</td><td className="px-3 py-3">{number(row.empresariales)}</td><td className="px-3 py-3">{number(row.independientes)}</td><td className="px-3 py-3 font-black">{number(row.total)}</td><td className="px-3 py-3">{signed(row.variacion)}</td><td className="px-3 py-3">{row.variacionPorcentual === null ? '—' : percent(row.variacionPorcentual)}</td></tr>)}</tbody></table></div></ChartCard>
 }
 
 function EvolutionDetail({ rows, selectedMonth }) {
