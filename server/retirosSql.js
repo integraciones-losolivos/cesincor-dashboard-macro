@@ -73,7 +73,7 @@ WITH NOVEDADES AS (
   WHERE UPPER(TRIM(IFNULL(B."U_tdbenef", ''))) IN ('A','M','P','D')
     AND (
       UPPER(TRIM(IFNULL(H."U_estado", ''))) LIKE 'CANCX%'
-      OR UPPER(TRIM(IFNULL(E."Name", H."U_estado", ''))) IN ('ACT', 'ACTIVO')
+      OR UPPER(TRIM(COALESCE(E."Name", H."U_estado", ''))) IN ('ACT', 'ACTIVO')
     )
     AND (CASE WHEN UPPER(TRIM(IFNULL(H."U_estado", ''))) LIKE 'CANCX%' THEN COALESCE(B."U_fecRet", N."FECHA_NOVEDAD") ELSE B."U_fecRet" END) IS NOT NULL
 )
