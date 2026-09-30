@@ -15,17 +15,6 @@ const DATA_YEAR = new Date().getFullYear()
 const defaultFilters = { ...initialRetirosFilters }
 const yearRange = (year) => ({ from: `${year}-01-01`, to: `${year}-12-31` })
 function mergeRows(current, incoming) { const map = new Map(current.map((row) => [row.id, row])); incoming.forEach((row) => map.set(row.id, row)); return [...map.values()] }
-function latestMonthRange(rows) {
-  const latest = rows.map((row) => row.fecha).filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date || '')).sort().at(-1)
-  if (!latest) return null
-  const [year, month] = latest.split('-').map(Number)
-  const now = new Date()
-  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth() + 1
-  const end = isCurrentMonth
-    ? `${year}-${String(month).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-    : `${year}-${String(month).padStart(2, '0')}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`
-  return { fechaInicial: `${year}-${String(month).padStart(2, '0')}-01`, fechaFinal: end }
-}
 
 export default function RetirosDashboard({ areaName = 'Retiros', embedded = false, active = true }) {
   const [rows, setRows] = useState([])
@@ -37,25 +26,16 @@ export default function RetirosDashboard({ areaName = 'Retiros', embedded = fals
   const [historyReady, setHistoryReady] = useState(false)
   const activeRequests = useRef(new Map())
   const currentYearReady = useRef(false)
-  const dateRangeInitialized = useRef(false)
-
-  const initializeDateRange = useCallback((incoming) => {
-    if (dateRangeInitialized.current) return
-    const range = latestMonthRange(incoming)
-    if (!range) return
-    dateRangeInitialized.current = true
-    setFilters((current) => ({ ...current, ...range }))
-  }, [])
 
   const loadCurrentYear = useCallback(async (refresh = false) => {
     const key = `current:${refresh}`
     if (activeRequests.current.has(key)) return activeRequests.current.get(key)
     const request = fetchRetiros({ ...yearRange(DATA_YEAR), refresh: refresh ? 'incremental' : '' })
-      .then((incoming) => { setRows((current) => mergeRows(current, incoming)); initializeDateRange(incoming); currentYearReady.current = true; setError(''); return incoming })
+      .then((incoming) => { setRows((current) => mergeRows(current, incoming)); currentYearReady.current = true; setError(''); return incoming })
       .finally(() => activeRequests.current.delete(key))
     activeRequests.current.set(key, request)
     return request
-  }, [initializeDateRange])
+  }, [])
 
   const loadHistory = useCallback(async (refresh = false) => {
     if (historyReady && !refresh) return
@@ -64,12 +44,11 @@ export default function RetirosDashboard({ areaName = 'Retiros', embedded = fals
     setLoadingHistory(true)
     const request = fetchRetiros({ refresh: refresh ? 'incremental' : '' }).then((incoming) => {
       setRows((current) => refresh ? incoming : mergeRows(incoming.filter((row) => !row.fecha?.startsWith(`${DATA_YEAR}-`)), current.filter((row) => row.fecha?.startsWith(`${DATA_YEAR}-`))))
-      initializeDateRange(incoming)
       setHistoryReady(true); setError(''); return incoming
     }).finally(() => { activeRequests.current.delete(key); setLoadingHistory(false) })
     activeRequests.current.set(key, request)
     return request
-  }, [historyReady, initializeDateRange])
+  }, [historyReady])
 
   useEffect(() => {
     if (!active) return undefined
