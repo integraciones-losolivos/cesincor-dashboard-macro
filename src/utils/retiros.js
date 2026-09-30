@@ -13,6 +13,7 @@ export const initialRetirosFilters = {
   plan: RETIRO_TODOS,
   asesor: RETIRO_TODOS,
   tipoRetiro: RETIRO_TODOS,
+  causal: RETIRO_TODOS,
   estadoContrato: RETIRO_TODOS,
 }
 
@@ -30,6 +31,7 @@ export function filterRetiros(rows, filters) {
     (filters.plan === RETIRO_TODOS || row.plan === filters.plan) &&
     (filters.asesor === RETIRO_TODOS || row.asesor === filters.asesor) &&
     (filters.tipoRetiro === RETIRO_TODOS || row.tipo_retiro === filters.tipoRetiro) &&
+    (filters.causal === RETIRO_TODOS || row.causal_retiro === filters.causal) &&
     (filters.estadoContrato === RETIRO_TODOS || row.estado_contrato === filters.estadoContrato)
   ))
 }
@@ -126,4 +128,35 @@ export function buildRetirosMonthly(rows, { from = '', to = '' } = {}) {
     previous = total
     return { ...item, contratos, empresariales, independientes, total, variacion, variacionPorcentual }
   })
+}
+
+export function buildCausalSummary(rows) {
+  const total = buildRetirosKpis(rows).total
+  const grouped = new Map()
+  rows.forEach((row) => {
+    const causal = row.causal_retiro || 'SIN CAUSAL IDENTIFICADA'
+    const current = grouped.get(causal) || {
+      name: causal, contratosSet: new Set(), adicionales: 0, mascotas: 0,
+      empresarialesSet: new Set(), independientesSet: new Set(),
+    }
+    if (row.tipo_registro === 'CONTRATO') current.contratosSet.add(row.contrato)
+    if (row.tipo_registro === 'ADICIONAL') current.adicionales += 1
+    if (row.tipo_registro === 'MASCOTA') current.mascotas += 1
+    if (row.canal === 'EMPRESARIALES') current.empresarialesSet.add(row.contrato)
+    if (row.canal === 'INDEPENDIENTES') current.independientesSet.add(row.contrato)
+    grouped.set(causal, current)
+  })
+  return [...grouped.values()].map((item) => {
+    const contratos = item.contratosSet.size
+    const empresariales = item.empresarialesSet.size
+    const independientes = item.independientesSet.size
+    const cantidad = contratos + item.adicionales + item.mascotas
+    return { name: item.name, cantidad, porcentaje: total ? cantidad / total : 0, contratos, adicionales: item.adicionales, mascotas: item.mascotas, empresariales, independientes }
+  }).sort((a, b) => b.cantidad - a.cantidad || a.name.localeCompare(b.name))
+}
+
+export function buildCausalMonthly(rows, causal) {
+  const selected = causal ? rows.filter((row) => row.causal_retiro === causal) : rows
+  const bounds = selected.map((row) => row.fecha).filter(Boolean).sort()
+  return buildRetirosMonthly(selected, { from: bounds[0], to: bounds.at(-1) })
 }

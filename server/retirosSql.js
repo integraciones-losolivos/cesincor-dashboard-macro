@@ -21,10 +21,12 @@ export function buildRetirosSql({ from = '', to = '' } = {}) {
   const dates = dateConditions(from, to)
   return `
 WITH NOVEDADES AS (
-  SELECT "DocEntry", MAX("U_fecha") AS "FECHA_NOVEDAD"
-  FROM ${schema}."@OK1_EXE_COMEN_CONTR"
-  WHERE UPPER(TRIM(IFNULL("U_estNovedad", ''))) LIKE 'CANCX%'
-  GROUP BY "DocEntry"
+  SELECT "DocEntry", "U_fecha" AS "FECHA_NOVEDAD", UPPER(TRIM("U_estNovedad")) AS "CODIGO_CAUSAL"
+  FROM (
+    SELECT C.*, ROW_NUMBER() OVER (PARTITION BY C."DocEntry" ORDER BY C."U_fecha" DESC, C."LineId" DESC) AS RN
+    FROM ${schema}."@OK1_EXE_COMEN_CONTR" C
+    WHERE UPPER(TRIM(IFNULL(C."U_estNovedad", ''))) LIKE 'CANCX%'
+  ) WHERE RN = 1
 ), TITULAR AS (
   SELECT * FROM (
     SELECT B.*, ROW_NUMBER() OVER (PARTITION BY B."DocEntry" ORDER BY B."LineId") AS RN
@@ -43,6 +45,8 @@ WITH NOVEDADES AS (
     COALESCE(NULLIF(TRIM(C."U_nconv"), ''), 'SIN ENTIDAD') AS "ENTIDAD",
     COALESCE(NULLIF(TRIM(S."Name"), ''), 'SIN SUBUEN') AS "SUBUEN",
     CASE WHEN UPPER(TRIM(IFNULL(H."U_estado", ''))) = 'CANCXMORA' THEN 'CANCELADO POR MORA' ELSE COALESCE(E."Name", H."U_estado", 'SIN ESTADO') END AS "ESTADO_CONTRATO",
+    COALESCE(NULLIF(TRIM(EC."Name"), ''), NULLIF(TRIM(N."CODIGO_CAUSAL"), ''), 'SIN CAUSAL IDENTIFICADA') AS "CAUSAL_RETIRO",
+    COALESCE(N."CODIGO_CAUSAL", '') AS "CODIGO_CAUSAL",
     TIT."U_fecIng" AS "FECHA_INGRESO", COALESCE(TIT."U_fecRet", N."FECHA_NOVEDAD") AS "FECHA_RETIRO"
   FROM ${schema}."@OK1_EXE_CONTR_HEAD" H
   INNER JOIN TITULAR TIT ON TIT."DocEntry" = H."DocEntry"
@@ -50,6 +54,7 @@ WITH NOVEDADES AS (
   LEFT JOIN ${schema}."@OK1_EXE_CONV_HEAD" C ON C."DocEntry" = H."U_conve"
   LEFT JOIN ${schema}."@OK1_EXE_SUBUEN" S ON S."Code" = C."U_suen"
   LEFT JOIN ${schema}."@OK1_EXE_ESTADOCONTR" E ON E."Code" = H."U_estado"
+  LEFT JOIN ${schema}."@OK1_EXE_ESTADOCONTR" EC ON EC."Code" = N."CODIGO_CAUSAL"
   WHERE UPPER(TRIM(IFNULL(H."U_estado", ''))) LIKE 'CANCX%'
     AND COALESCE(TIT."U_fecRet", N."FECHA_NOVEDAD") IS NOT NULL
   UNION ALL
@@ -63,6 +68,8 @@ WITH NOVEDADES AS (
     COALESCE(NULLIF(TRIM(H."U_nompla"), ''), H."U_plan", 'SIN PLAN'), COALESCE(NULLIF(TRIM(H."U_nomVnd"), ''), 'SIN ASESOR'), COALESCE(NULLIF(TRIM(H."U_sucur"), ''), 'SIN SEDE'),
     COALESCE(NULLIF(TRIM(C."U_nconv"), ''), 'SIN ENTIDAD'), COALESCE(NULLIF(TRIM(S."Name"), ''), 'SIN SUBUEN'),
     CASE WHEN UPPER(TRIM(IFNULL(H."U_estado", ''))) = 'CANCXMORA' THEN 'CANCELADO POR MORA' ELSE COALESCE(E."Name", H."U_estado", 'SIN ESTADO') END,
+    CASE WHEN UPPER(TRIM(IFNULL(H."U_estado", ''))) LIKE 'CANCX%' THEN COALESCE(NULLIF(TRIM(EC."Name"), ''), NULLIF(TRIM(N."CODIGO_CAUSAL"), ''), 'SIN CAUSAL IDENTIFICADA') ELSE 'SIN CAUSAL IDENTIFICADA' END,
+    CASE WHEN UPPER(TRIM(IFNULL(H."U_estado", ''))) LIKE 'CANCX%' THEN COALESCE(N."CODIGO_CAUSAL", '') ELSE '' END,
     B."U_fecIng", CASE WHEN UPPER(TRIM(IFNULL(H."U_estado", ''))) LIKE 'CANCX%' THEN COALESCE(B."U_fecRet", N."FECHA_NOVEDAD") ELSE B."U_fecRet" END
   FROM ${schema}."@OK1_EXE_CONTR_HEAD" H
   INNER JOIN ${schema}."@OK1_EXE_CONT_BENEFI" B ON B."DocEntry" = H."DocEntry"
@@ -70,6 +77,7 @@ WITH NOVEDADES AS (
   LEFT JOIN ${schema}."@OK1_EXE_CONV_HEAD" C ON C."DocEntry" = H."U_conve"
   LEFT JOIN ${schema}."@OK1_EXE_SUBUEN" S ON S."Code" = C."U_suen"
   LEFT JOIN ${schema}."@OK1_EXE_ESTADOCONTR" E ON E."Code" = H."U_estado"
+  LEFT JOIN ${schema}."@OK1_EXE_ESTADOCONTR" EC ON EC."Code" = N."CODIGO_CAUSAL"
   WHERE UPPER(TRIM(IFNULL(B."U_tdbenef", ''))) IN ('A','M','P','D')
     AND (
       UPPER(TRIM(IFNULL(H."U_estado", ''))) LIKE 'CANCX%'
