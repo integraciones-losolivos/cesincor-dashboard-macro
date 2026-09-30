@@ -12,7 +12,7 @@ export const initialRetirosFilters = {
   entidad: RETIRO_TODOS,
   plan: RETIRO_TODOS,
   asesor: RETIRO_TODOS,
-  tipoRegistro: RETIRO_TODOS,
+  tipoRetiro: RETIRO_TODOS,
   estadoContrato: RETIRO_TODOS,
 }
 
@@ -29,7 +29,7 @@ export function filterRetiros(rows, filters) {
     (filters.entidad === RETIRO_TODOS || row.entidad === filters.entidad) &&
     (filters.plan === RETIRO_TODOS || row.plan === filters.plan) &&
     (filters.asesor === RETIRO_TODOS || row.asesor === filters.asesor) &&
-    (filters.tipoRegistro === RETIRO_TODOS || row.tipo_registro === filters.tipoRegistro) &&
+    (filters.tipoRetiro === RETIRO_TODOS || row.tipo_retiro === filters.tipoRetiro) &&
     (filters.estadoContrato === RETIRO_TODOS || row.estado_contrato === filters.estadoContrato)
   ))
 }
@@ -78,4 +78,52 @@ export function groupRetirosBySede(rows) {
     grouped.set(key, current)
   })
   return [...grouped.values()].sort((a, b) => b.cantidad - a.cantidad).slice(0, 10)
+}
+
+function monthKeys(from, to, rows) {
+  const rowKeys = rows.map((row) => row.fecha?.slice(0, 7)).filter(Boolean).sort()
+  const first = from?.slice(0, 7) || rowKeys[0]
+  const last = to?.slice(0, 7) || rowKeys.at(-1)
+  if (!first || !last || first > last) return []
+  const [year, month] = first.split('-').map(Number)
+  const cursor = new Date(year, month - 1, 1)
+  const result = []
+  while (`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}` <= last) {
+    result.push(`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`)
+    cursor.setMonth(cursor.getMonth() + 1)
+  }
+  return result
+}
+
+export function buildRetirosMonthly(rows, { from = '', to = '' } = {}) {
+  const grouped = new Map(monthKeys(from, to, rows).map((key) => [key, {
+    key, contratosSet: new Set(), adicionales: 0, mascotas: 0, empresarialesSet: new Set(), independientesSet: new Set(),
+    adicionalMayor: 0, adicionalMenor: 0, mascota: 0, mascotaAdicional: 0,
+  }]))
+  rows.forEach((row) => {
+    const key = row.fecha?.slice(0, 7)
+    if (!key) return
+    const current = grouped.get(key) || { key, contratosSet: new Set(), adicionales: 0, mascotas: 0, empresarialesSet: new Set(), independientesSet: new Set(), adicionalMayor: 0, adicionalMenor: 0, mascota: 0, mascotaAdicional: 0 }
+    if (row.tipo_registro === 'CONTRATO') current.contratosSet.add(row.contrato)
+    if (row.tipo_registro === 'ADICIONAL') current.adicionales += 1
+    if (row.tipo_registro === 'MASCOTA') current.mascotas += 1
+    if (row.canal === 'EMPRESARIALES') current.empresarialesSet.add(row.contrato)
+    if (row.canal === 'INDEPENDIENTES') current.independientesSet.add(row.contrato)
+    if (row.codigo_tipo === 'A') current.adicionalMayor += 1
+    if (row.codigo_tipo === 'M') current.adicionalMenor += 1
+    if (row.codigo_tipo === 'P') current.mascota += 1
+    if (row.codigo_tipo === 'D') current.mascotaAdicional += 1
+    grouped.set(key, current)
+  })
+  let previous = null
+  return [...grouped.values()].sort((a, b) => a.key.localeCompare(b.key)).map((item) => {
+    const contratos = item.contratosSet.size
+    const empresariales = item.empresarialesSet.size
+    const independientes = item.independientesSet.size
+    const total = contratos + item.adicionales + item.mascotas
+    const variacion = previous === null ? null : total - previous
+    const variacionPorcentual = previous ? variacion / previous : null
+    previous = total
+    return { ...item, contratos, empresariales, independientes, total, variacion, variacionPorcentual }
+  })
 }

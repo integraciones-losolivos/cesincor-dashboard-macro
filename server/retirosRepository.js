@@ -19,7 +19,8 @@ async function queryRetiros(range) {
 }
 
 const loadCachedRange = createPersistentRangeCache({
-  namespace: `retiros-${process.env.HANA_SCHEMA || 'default'}`,
+  // v3 invalida canales ambiguos persistidos como ADICIONALES/MASCOTAS.
+  namespace: `retiros-v3-${process.env.HANA_SCHEMA || 'default'}`,
   ttlMs: CACHE_TTL_MS,
   dateField: 'fecha',
   rowKey: (row) => row.id,
