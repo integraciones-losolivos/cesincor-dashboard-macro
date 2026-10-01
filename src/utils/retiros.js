@@ -173,6 +173,56 @@ export function buildPermanenceMonthly(rows) {
   return [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, entries]) => ({ key, ...buildPermanenceKpis(entries) }))
 }
 
+export function petRows(rows) { return rows.filter((row) => row.codigo_tipo === 'P' || row.codigo_tipo === 'D') }
+export function buildPetKpis(rows, allRetirements = rows) {
+  const pets = petRows(rows)
+  const valid = pets.map((row) => row.dias_permanencia).filter((days) => Number.isFinite(days) && days >= 0)
+  const totalRetirements = buildRetirosKpis(allRetirements).total
+  return {
+    total: pets.length, pet: pets.filter((row) => row.codigo_tipo === 'P').length,
+    additionalPet: pets.filter((row) => row.codigo_tipo === 'D').length,
+    contracts: new Set(pets.map((row) => row.contrato)).size,
+    participation: totalRetirements ? pets.length / totalRetirements : 0,
+    calculable: valid.length, invalid: pets.length - valid.length,
+    average: valid.length ? valid.reduce((sum, value) => sum + value, 0) / valid.length : null,
+    median: median(valid), before1: valid.filter((value) => value < 30).length,
+    before6: valid.filter((value) => value < 180).length, over1Year: valid.filter((value) => value > 365).length,
+  }
+}
+export function buildPetMonthly(rows) {
+  const grouped = new Map()
+  petRows(rows).forEach((row) => {
+    const key = row.fecha?.slice(0, 7)
+    if (!key) return
+    const current = grouped.get(key) || { key, mascota: 0, mascotaAdicional: 0, total: 0 }
+    if (row.codigo_tipo === 'P') current.mascota += 1
+    if (row.codigo_tipo === 'D') current.mascotaAdicional += 1
+    current.total += 1; grouped.set(key, current)
+  })
+  let previous = null
+  return [...grouped.values()].sort((a, b) => a.key.localeCompare(b.key)).map((item) => {
+    const variation = previous === null ? null : item.total - previous
+    const variationPercentage = previous ? variation / previous : null
+    previous = item.total
+    return { ...item, variation, variationPercentage }
+  })
+}
+export function buildPetSummary(rows, key) {
+  const pets = petRows(rows), grouped = new Map()
+  pets.forEach((row) => {
+    const name = row[key] || 'SIN DEFINIR', current = grouped.get(name) || []
+    current.push(row); grouped.set(name, current)
+  })
+  return [...grouped.entries()].map(([name, entries]) => {
+    const kpis = buildPetKpis(entries, pets)
+    return { name, total: kpis.total, mascota: kpis.pet, mascotaAdicional: kpis.additionalPet, porcentaje: pets.length ? kpis.total / pets.length : 0, average: kpis.average, median: kpis.median, principalPlan: groupRetirosCounted(entries, 'plan', { limit: 1 })[0]?.name || 'SIN PLAN', principalSede: groupRetirosCounted(entries, 'sede', { limit: 1 })[0]?.name || 'SIN SEDE', principalAsesor: groupRetirosCounted(entries, 'asesor', { limit: 1 })[0]?.name || 'SIN ASESOR' }
+  }).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
+}
+export function buildPetPermanenceDistribution(rows) {
+  const pets = petRows(rows)
+  return PERMANENCE_RANGES.map((range) => ({ name: range.name, cantidad: pets.filter((row) => permanenceRange(row)?.key === range.key).length }))
+}
+
 export function buildRetirosKpis(rows) {
   const contratos = new Set(rows.filter((row) => row.tipo_registro === 'CONTRATO').map((row) => row.contrato)).size
   const adicionales = rows.filter((row) => row.tipo_registro === 'ADICIONAL').length
