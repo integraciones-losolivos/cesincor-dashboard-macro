@@ -61,6 +61,52 @@ export function buildTerritorySummary(rows, key = 'sede') {
   }).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
 }
 
+export function buildRetirosValueKpis(rows) {
+  const applicable = rows.filter((row) => row.aplica_valor)
+  const total = applicable.reduce((sum, row) => sum + Number(row.valor_asociado || 0), 0)
+  const contracts = applicable.filter((row) => row.tipo_registro === 'CONTRATO')
+  const contractValue = contracts.reduce((sum, row) => sum + Number(row.valor_asociado || 0), 0)
+  const businessValue = contracts.filter((row) => row.canal === 'EMPRESARIALES').reduce((sum, row) => sum + Number(row.valor_asociado || 0), 0)
+  const independentValue = contracts.filter((row) => row.canal === 'INDEPENDIENTES').reduce((sum, row) => sum + Number(row.valor_asociado || 0), 0)
+  return { total, contractValue, businessValue, independentValue, average: applicable.length ? total / applicable.length : 0, applicable: applicable.length, withoutValue: applicable.filter((row) => !Number(row.valor_asociado || 0)).length }
+}
+
+export function buildValueSummary(rows, key) {
+  const totalValue = buildRetirosValueKpis(rows).total
+  const grouped = new Map()
+  rows.forEach((row) => {
+    const name = row[key] || 'SIN DEFINIR'
+    const current = grouped.get(name) || []
+    current.push(row)
+    grouped.set(name, current)
+  })
+  return [...grouped.entries()].map(([name, entries]) => {
+    const value = buildRetirosValueKpis(entries)
+    const cantidad = buildRetirosKpis(entries).total
+    return { name, cantidad, valor: value.total, promedio: value.applicable ? value.total / value.applicable : 0, participacion: totalValue ? value.total / totalValue : 0, unidadesValoradas: value.applicable }
+  }).sort((a, b) => b.valor - a.valor || a.name.localeCompare(b.name))
+}
+
+export function buildValueMonthly(rows) {
+  const grouped = new Map()
+  rows.filter((row) => row.aplica_valor && row.fecha).forEach((row) => {
+    const key = row.fecha.slice(0, 7)
+    const current = grouped.get(key) || { key, valor: 0, empresariales: 0, independientes: 0, adicionales_personas: 0, adicionales_mascotas: 0 }
+    const value = Number(row.valor_asociado || 0)
+    current.valor += value
+    const channelKey = String(row.canal || '').toLowerCase().replaceAll(' ', '_')
+    if (channelKey in current) current[channelKey] += value
+    grouped.set(key, current)
+  })
+  let previous = null
+  return [...grouped.values()].sort((a, b) => a.key.localeCompare(b.key)).map((item) => {
+    const variacion = previous === null ? null : item.valor - previous
+    const variacionPorcentual = previous ? variacion / previous : null
+    previous = item.valor
+    return { ...item, variacion, variacionPorcentual }
+  })
+}
+
 export function buildRetirosKpis(rows) {
   const contratos = new Set(rows.filter((row) => row.tipo_registro === 'CONTRATO').map((row) => row.contrato)).size
   const adicionales = rows.filter((row) => row.tipo_registro === 'ADICIONAL').length
