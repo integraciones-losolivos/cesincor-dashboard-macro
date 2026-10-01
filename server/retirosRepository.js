@@ -20,8 +20,8 @@ async function queryRetiros(range) {
 }
 
 const loadCachedRange = createPersistentRangeCache({
-  // v13 aplica la fecha de novedad oficial del reporte SAP (U_fecha).
-  namespace: `retiros-v13-${process.env.HANA_SCHEMA || 'default'}`,
+  // v14 invalida resultados persistidos antes de conciliar la consulta oficial SAP.
+  namespace: `retiros-v14-${process.env.HANA_SCHEMA || 'default'}`,
   ttlMs: CACHE_TTL_MS,
   dateField: 'fecha',
   rowKey: (row) => row.id,

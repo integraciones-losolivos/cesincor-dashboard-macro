@@ -78,7 +78,7 @@ export default function RetirosDashboard({ areaName = 'Retiros', embedded = fals
   const loadCurrentYear = useCallback(async (refresh = false) => {
     const key = `current:${refresh}`
     if (activeRequests.current.has(key)) return activeRequests.current.get(key)
-    const request = fetchRetiros({ ...yearRange(DATA_YEAR), refresh: refresh ? 'incremental' : '' })
+    const request = fetchRetiros({ ...yearRange(DATA_YEAR), refresh: refresh ? 'full' : '' })
       .then((incoming) => { setRows((current) => mergeRows(current, incoming)); currentYearReady.current = true; setError(''); return incoming })
       .finally(() => activeRequests.current.delete(key))
     activeRequests.current.set(key, request)
@@ -90,7 +90,7 @@ export default function RetirosDashboard({ areaName = 'Retiros', embedded = fals
     const key = `history:${refresh}`
     if (activeRequests.current.has(key)) return activeRequests.current.get(key)
     setLoadingHistory(true)
-    const request = fetchRetiros({ refresh: refresh ? 'incremental' : '' }).then((incoming) => {
+    const request = fetchRetiros({ refresh: refresh ? 'full' : '' }).then((incoming) => {
       setRows((current) => refresh ? incoming : mergeRows(incoming.filter((row) => !row.fecha?.startsWith(`${DATA_YEAR}-`)), current.filter((row) => row.fecha?.startsWith(`${DATA_YEAR}-`))))
       setHistoryReady(true); setError(''); return incoming
     }).finally(() => { activeRequests.current.delete(key); setLoadingHistory(false) })
