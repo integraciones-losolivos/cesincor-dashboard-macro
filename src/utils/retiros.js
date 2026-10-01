@@ -107,6 +107,72 @@ export function buildValueMonthly(rows) {
   })
 }
 
+export const PERMANENCE_RANGES = [
+  { key: 'MENOS_1_MES', name: 'Menos de 1 mes', min: 0, max: 29 },
+  { key: '1_A_3_MESES', name: '1 a 3 meses', min: 30, max: 90 },
+  { key: '4_A_6_MESES', name: '4 a 6 meses', min: 91, max: 180 },
+  { key: '7_A_12_MESES', name: '7 a 12 meses', min: 181, max: 365 },
+  { key: '1_A_2_ANOS', name: '1 a 2 años', min: 366, max: 730 },
+  { key: '2_A_5_ANOS', name: '2 a 5 años', min: 731, max: 1825 },
+  { key: 'MAS_5_ANOS', name: 'Más de 5 años', min: 1826, max: Infinity },
+  { key: 'SIN_CALCULO', name: 'Sin permanencia calculable', invalid: true },
+]
+
+export function additionalRows(rows) { return rows.filter((row) => row.codigo_tipo === 'A' || row.codigo_tipo === 'M') }
+export function permanenceRange(row) {
+  const days = row.dias_permanencia
+  if (days === null || days === undefined || days < 0) return PERMANENCE_RANGES.at(-1)
+  return PERMANENCE_RANGES.find((range) => !range.invalid && days >= range.min && days <= range.max)
+}
+function median(values) {
+  const sorted = values.filter((value) => Number.isFinite(value) && value >= 0).sort((a, b) => a - b)
+  if (!sorted.length) return null
+  const middle = Math.floor(sorted.length / 2)
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2
+}
+export function buildPermanenceKpis(rows) {
+  const additions = additionalRows(rows)
+  const valid = additions.map((row) => row.dias_permanencia).filter((days) => Number.isFinite(days) && days >= 0)
+  return {
+    total: additions.length, calculable: valid.length, invalid: additions.length - valid.length,
+    average: valid.length ? valid.reduce((sum, days) => sum + days, 0) / valid.length : null,
+    median: median(valid), before1: valid.filter((days) => days < 30).length,
+    before3: valid.filter((days) => days < 90).length, before6: valid.filter((days) => days < 180).length,
+    over1Year: valid.filter((days) => days > 365).length,
+  }
+}
+export function buildPermanenceDistribution(rows) {
+  const additions = additionalRows(rows)
+  return PERMANENCE_RANGES.map((range) => ({
+    key: range.key, name: range.name,
+    cantidad: additions.filter((row) => permanenceRange(row)?.key === range.key).length,
+    mayor: additions.filter((row) => row.codigo_tipo === 'A' && permanenceRange(row)?.key === range.key).length,
+    menor: additions.filter((row) => row.codigo_tipo === 'M' && permanenceRange(row)?.key === range.key).length,
+  }))
+}
+export function buildPermanenceSummary(rows, key) {
+  const grouped = new Map()
+  additionalRows(rows).forEach((row) => {
+    const name = row[key] || 'SIN DEFINIR'
+    const current = grouped.get(name) || []
+    current.push(row); grouped.set(name, current)
+  })
+  return [...grouped.entries()].map(([name, entries]) => {
+    const kpis = buildPermanenceKpis(entries)
+    return { name, ...kpis, earlyPercentage: kpis.calculable ? kpis.before6 / kpis.calculable : 0 }
+  }).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
+}
+export function buildPermanenceMonthly(rows) {
+  const grouped = new Map()
+  additionalRows(rows).forEach((row) => {
+    const key = row.fecha?.slice(0, 7)
+    if (!key) return
+    const current = grouped.get(key) || []
+    current.push(row); grouped.set(key, current)
+  })
+  return [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, entries]) => ({ key, ...buildPermanenceKpis(entries) }))
+}
+
 export function buildRetirosKpis(rows) {
   const contratos = new Set(rows.filter((row) => row.tipo_registro === 'CONTRATO').map((row) => row.contrato)).size
   const adicionales = rows.filter((row) => row.tipo_registro === 'ADICIONAL').length
