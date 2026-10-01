@@ -3,6 +3,7 @@ import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
 import { ContactRound, Mail, MailX, Phone, PhoneOff, ShieldAlert, ShieldCheck } from 'lucide-react'
 import ChartCard from '../ChartCard.jsx'
 import KpiCard from '../KpiCard.jsx'
+import { ProgressList } from './ExecutiveViz.jsx'
 import { number, percent } from '../../utils/dashboard.js'
 import { buildQualityAlerts, buildQualityDimension, buildQualityKpis, isContactable, QUALITY_ALERTS } from '../../utils/retiros.js'
 
@@ -33,5 +34,5 @@ export default function RetirosQuality({ rows }) {
   </div>
 }
 
-function QualityBars({ rows, color = '#ea580c' }) { return <div className="h-80"><ResponsiveContainer width="100%" height="100%"><BarChart data={rows} layout="vertical"><CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" horizontal={false} /><XAxis type="number" allowDecimals={false} /><YAxis type="category" dataKey="name" width={160} tick={{ fontSize: 9 }} /><Tooltip /><Bar dataKey="notContactable" name="No contactables" fill={color} radius={[0, 8, 8, 0]} /></BarChart></ResponsiveContainer></div> }
+function QualityBars({ rows, color = '#ea580c' }) { return <ProgressList data={rows} valueKey="notContactable" color={color} /> }
 function QualityDetail({ rows, title }) { return <ChartCard title={`Detalle de alerta · ${title}`} subtitle={`${number(rows.length)} registros; se muestran hasta 200.`}><div className="overflow-x-auto"><table className="min-w-full whitespace-nowrap text-left text-sm"><thead><tr className="border-b text-[11px] uppercase text-slate-400">{['Contrato', 'Identificación / nombre', 'Canal', 'Tipo', 'Teléfono 1', 'Teléfono 2', 'Celular', 'Correo', 'Dirección', 'Plan', 'Asesor', 'Sede / SubUEN', 'Entidad', 'Retiro'].map((head) => <th key={head} className="px-3 py-3">{head}</th>)}</tr></thead><tbody>{rows.slice(0, 200).map((row) => <tr key={row.id} className="border-b border-slate-100"><td className="px-3 py-3 font-black">{row.contrato}</td><td className="px-3 py-3"><p className="font-bold">{row.nombre}</p><p className="text-xs text-slate-500">{row.documento}</p></td><td className="px-3 py-3">{row.canal}</td><td className="px-3 py-3">{row.tipo_retiro}</td><td className="px-3 py-3">{row.telefono_1 || '—'}</td><td className="px-3 py-3">{row.telefono_2 || '—'}</td><td className="px-3 py-3">{row.celular || '—'}</td><td className="px-3 py-3">{row.correo || '—'}</td><td className="max-w-72 truncate px-3 py-3">{row.direccion || '—'}</td><td className="px-3 py-3">{row.plan}</td><td className="px-3 py-3">{row.asesor}</td><td className="px-3 py-3">{row.sede} · {row.subuen}</td><td className="px-3 py-3">{row.entidad}</td><td className="px-3 py-3">{row.fecha || '—'}</td></tr>)}</tbody></table></div></ChartCard> }

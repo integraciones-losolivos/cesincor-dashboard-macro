@@ -15,16 +15,11 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
   Cell,
   Pie,
   PieChart,
   ResponsiveContainer,
   Tooltip,
-  XAxis,
-  YAxis,
 } from "recharts";
 import { fetchPrevisionIncomeRows } from "../../services/previsionIncomeApi.js";
 import { money, number } from "../../utils/dashboard.js";
@@ -46,6 +41,7 @@ import CommercialPortfolio from "./CommercialPortfolio.jsx";
 import ConventionSummary from "./ConventionSummary.jsx";
 import IncomeFilters from "./IncomeFilters.jsx";
 import PrevisionSubnav from "./PrevisionSubnav.jsx";
+import { DataIllustration, RankingList } from "./ExecutiveViz.jsx";
 import PlanSummary from "./PlanSummary.jsx";
 import RelationshipSummary from "./RelationshipSummary.jsx";
 import SiteSummary from "./SiteSummary.jsx";
@@ -174,6 +170,7 @@ export default function IncomeOverview({ active = true }) {
               value={number(summary.vidas)}
               helper="Personas y mascotas activas dentro del universo filtrado."
               icon={<UsersRound className="size-6" />}
+              illustration={<DataIllustration type="people" className="w-full" />}
               accent="emerald"
             />
             <KpiCard
@@ -188,6 +185,7 @@ export default function IncomeOverview({ active = true }) {
               value={number(summary.titulares)}
               helper={`${number(summary.adicionalesPersonas)} adicionales personas, ${number(summary.mascotas)} mascotas y ${number(summary.beneficiarios)} beneficiarios.`}
               icon={<UserRoundCheck className="size-6" />}
+              illustration={<DataIllustration type="people" className="w-full" />}
               accent="violet"
             />
             <KpiCard
@@ -202,6 +200,7 @@ export default function IncomeOverview({ active = true }) {
               value={number(summary.adicionalesPersonas)}
               helper={`${number(summary.mascotas)} mascotas adicionales identificadas por separado.`}
               icon={<Layers3 className="size-6" />}
+              illustration={<DataIllustration type="people" className="w-full" />}
               accent="violet"
             />
             <KpiCard
@@ -284,31 +283,7 @@ export default function IncomeOverview({ active = true }) {
                 subtitle="Sedes con mayor cantidad de protegidos en el universo filtrado."
                 accent="violet"
               >
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={bySede}
-                      layout="vertical"
-                      margin={{ left: 12, right: 18 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                      <XAxis type="number" tickFormatter={number} />
-                      <YAxis
-                        dataKey="name"
-                        type="category"
-                        width={100}
-                        tick={{ fontSize: 11 }}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar
-                        dataKey="vidas"
-                        name="Vidas"
-                        fill="#0f766e"
-                        radius={[0, 8, 8, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                <RankingList data={bySede} valueKey="vidas" color="#0f766e" limit={8} />
               </ChartCard>
             </div>
           )}

@@ -4,6 +4,7 @@ import { Building2, PawPrint, Sigma, UserMinus, UsersRound } from 'lucide-react'
 import ChartCard from '../ChartCard.jsx'
 import CustomTooltip from '../CustomTooltip.jsx'
 import KpiCard from '../KpiCard.jsx'
+import { ShareStrip } from './ExecutiveViz.jsx'
 import { monthLabel, number, percent } from '../../utils/dashboard.js'
 import { buildCausalSummary, buildChannelDimension, buildChannelSummary, buildRetirosKpis, buildRetirosMonthly, groupRetiros, RETIRO_CHANNELS } from '../../utils/retiros.js'
 
@@ -42,7 +43,7 @@ export default function RetirosChannels({ rows, from, to, onOpenDetail }) {
     </div>
 
     <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
-      <ChartCard title="Comparativo entre canales" subtitle="Cantidad y participación dentro del periodo filtrado." accent="rose"><div className="h-80"><ResponsiveContainer width="100%" height="100%"><BarChart data={summary} layout="vertical"><CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" horizontal={false} /><XAxis type="number" allowDecimals={false} /><YAxis type="category" dataKey="name" width={165} tick={{ fontSize: 10 }} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="cantidad" name="Retiros" fill="#be123c" radius={[0, 9, 9, 0]} onClick={(entry) => setSelectedChannel(entry?.name || entry?.payload?.name || '')} /></BarChart></ResponsiveContainer></div></ChartCard>
+      <ChartCard title="Participación por canal" subtitle="La barra 100% permite comparar el peso relativo sin repetir cuatro barras." accent="violet"><ShareStrip data={summary} colors={channelConfig.map((item) => item.color)} /><div className="mt-4 grid grid-cols-2 gap-2">{summary.map((item) => <button key={item.name} onClick={() => setSelectedChannel(item.name)} className="rounded-xl border border-slate-100 px-3 py-2 text-left text-[11px] font-black text-slate-600 transition hover:bg-slate-50">Analizar {item.name.toLowerCase()}</button>)}</div></ChartCard>
       <ChartCard title="Evolución mensual por canal" subtitle="Activa o desactiva canales para facilitar la comparación." accent="blue"><div className="mb-4 flex flex-wrap gap-2">{channelConfig.map((item) => <button key={item.name} type="button" onClick={() => toggle(item.name)} className={`rounded-full border px-3 py-1.5 text-xs font-black ${visibleChannels.has(item.name) ? 'text-white' : 'border-slate-200 text-slate-400'}`} style={visibleChannels.has(item.name) ? { backgroundColor: item.color, borderColor: item.color } : undefined}>{item.label}</button>)}</div><div className="h-72"><ResponsiveContainer width="100%" height="100%"><LineChart data={monthly}><CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" vertical={false} /><XAxis dataKey="key" tickFormatter={(key) => monthLabel(`${key}-01`)} /><YAxis allowDecimals={false} /><Tooltip content={<CustomTooltip />} />{channelConfig.filter((item) => visibleChannels.has(item.name)).map((item) => <Line key={item.name} type="monotone" dataKey={item.monthly} name={item.label} stroke={item.color} strokeWidth={2.5} dot={false} activeDot={{ r: 6 }} />)}</LineChart></ResponsiveContainer></div></ChartCard>
     </div>
 
