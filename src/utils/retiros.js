@@ -10,6 +10,7 @@ export const initialRetirosFilters = {
   canal: RETIRO_TODOS,
   sede: RETIRO_TODOS,
   subuen: RETIRO_TODOS,
+  municipio: RETIRO_TODOS,
   entidad: RETIRO_TODOS,
   plan: RETIRO_TODOS,
   asesor: RETIRO_TODOS,
@@ -28,6 +29,7 @@ export function filterRetiros(rows, filters) {
     (filters.canal === RETIRO_TODOS || row.canal === filters.canal) &&
     (filters.sede === RETIRO_TODOS || row.sede === filters.sede) &&
     (filters.subuen === RETIRO_TODOS || row.subuen === filters.subuen) &&
+    (filters.municipio === RETIRO_TODOS || row.municipio === filters.municipio) &&
     (filters.entidad === RETIRO_TODOS || row.entidad === filters.entidad) &&
     (filters.plan === RETIRO_TODOS || row.plan === filters.plan) &&
     (filters.asesor === RETIRO_TODOS || row.asesor === filters.asesor) &&
@@ -35,6 +37,28 @@ export function filterRetiros(rows, filters) {
     (filters.causal === RETIRO_TODOS || row.causal_retiro === filters.causal) &&
     (filters.estadoContrato === RETIRO_TODOS || row.estado_contrato === filters.estadoContrato)
   ))
+}
+
+export function buildTerritorySummary(rows, key = 'sede') {
+  const total = buildRetirosKpis(rows).total
+  const grouped = new Map()
+  rows.forEach((row) => {
+    const name = row[key] || `SIN ${key.toUpperCase()}`
+    const current = grouped.get(name) || []
+    current.push(row)
+    grouped.set(name, current)
+  })
+  return [...grouped.entries()].map(([name, entries]) => {
+    const kpis = buildRetirosKpis(entries)
+    const channels = buildChannelSummary(entries)
+    return {
+      name, total: kpis.total, contratos: kpis.contratos, adicionales: kpis.adicionales, mascotas: kpis.mascotas,
+      empresariales: channels[0].cantidad, independientes: channels[1].cantidad,
+      adicionales_personas: channels[2].cantidad, adicionales_mascotas: channels[3].cantidad,
+      porcentaje: total ? kpis.total / total : 0,
+      principalCausal: buildCausalSummary(entries)[0]?.name || 'SIN CAUSAL IDENTIFICADA',
+    }
+  }).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
 }
 
 export function buildRetirosKpis(rows) {
