@@ -14,7 +14,7 @@ const channelConfig = [
   { name: 'ADICIONALES MASCOTAS', monthly: 'mascotas', dataKey: 'adicionales_mascotas', label: 'Adicionales mascotas', color: '#7c3aed' },
 ]
 
-export default function RetirosChannels({ rows, from, to }) {
+export default function RetirosChannels({ rows, from, to, onOpenDetail }) {
   const summary = useMemo(() => buildChannelSummary(rows), [rows])
   const total = summary.reduce((sum, item) => sum + item.cantidad, 0)
   const leader = summary.reduce((best, item) => !best || item.cantidad > best.cantidad ? item : best, null)
@@ -53,6 +53,7 @@ export default function RetirosChannels({ rows, from, to }) {
 
     <div className="grid gap-6 xl:grid-cols-3"><ChartCard title={`Planes · ${activeChannel}`} subtitle="Top 8 dentro del canal." accent="blue"><DimensionBars data={byPlan} channel={activeChannel} /></ChartCard><ChartCard title={`Asesores · ${activeChannel}`} subtitle="Comparativo Top 8." accent="orange"><DimensionBars data={byAdvisor} channel={activeChannel} /></ChartCard><ChartCard title={`Causales · ${activeChannel}`} subtitle="Principales motivos disponibles." accent="rose"><SimpleBars data={causes} /></ChartCard></div>
     <ChannelTable summary={summary} selected={activeChannel} onSelect={setSelectedChannel} />
+    <div className="flex justify-end"><button type="button" onClick={() => onOpenDetail?.({ canal: activeChannel })} className="rounded-xl bg-rose-700 px-4 py-2.5 text-sm font-black text-white">Ver detalle filtrado</button></div>
     <ChannelDetail rows={channelRows} channel={activeChannel} />
   </div>
 }

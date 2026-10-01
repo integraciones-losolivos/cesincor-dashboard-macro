@@ -33,13 +33,28 @@ WITH NOVEDADES AS (
     FROM ${schema}."@OK1_EXE_CONT_BENEFI" B
     WHERE TRIM(IFNULL(B."U_parent", '')) = '0'
   ) WHERE RN = 1
+), CANCELACIONES AS (
+  SELECT H."DocEntry", H."U_contrant" AS "CONTRATANTE", TIT."U_numdoc" AS "DOCUMENTO_PRINCIPAL", TIT."U_fecIng" AS "FECHA_INGRESO", COALESCE(TIT."U_fecRet", N."FECHA_NOVEDAD") AS "FECHA_RETIRO"
+  FROM ${schema}."@OK1_EXE_CONTR_HEAD" H
+  INNER JOIN TITULAR TIT ON TIT."DocEntry" = H."DocEntry"
+  LEFT JOIN NOVEDADES N ON N."DocEntry" = H."DocEntry"
+  WHERE UPPER(TRIM(IFNULL(H."U_estado", ''))) LIKE 'CANCX%'
 ), RETIROS AS (
   SELECT
     H."DocEntry" AS "CONTRATO", TIT."LineId" AS "LINEA", 'T' AS "CODIGO_TIPO", 'CONTRATO' AS "TIPO_REGISTRO", 'TITULAR' AS "TIPO_RETIRO",
     CASE WHEN TRIM(IFNULL(C."U_uen", '')) = 'UEN1' THEN 'EMPRESARIALES' WHEN TRIM(IFNULL(C."U_uen", '')) = 'UEN2' THEN 'INDEPENDIENTES' ELSE 'SIN CLASIFICAR' END AS "CANAL",
     COALESCE(NULLIF(TRIM(H."U_ncontrat"), ''), 'SIN NOMBRE') AS "NOMBRE",
-    COALESCE(NULLIF(TRIM(H."U_ncontrat"), ''), 'SIN ASEGURADO PRINCIPAL') AS "ASEGURADO_PRINCIPAL",
+    COALESCE(NULLIF(TRIM(IFNULL(TIT."U_pape", '') || ' ' || IFNULL(TIT."U_sape", '') || ' ' || IFNULL(TIT."U_nombre", '') || ' ' || IFNULL(TIT."U_snombre", '')), ''), NULLIF(TRIM(H."U_ncontrat"), ''), 'SIN ASEGURADO PRINCIPAL') AS "ASEGURADO_PRINCIPAL",
     COALESCE(NULLIF(TRIM(TIT."U_numdoc"), ''), H."U_contrant") AS "DOCUMENTO",
+    COALESCE(NULLIF(TRIM(TIT."U_numdoc"), ''), H."U_contrant", '') AS "CEDULA_ASEGURADO_PRINCIPAL",
+    CASE WHEN NULLIF(TRIM(TIT."U_numdoc"), '') IS NULL OR TRIM(H."U_contrant") = TRIM(TIT."U_numdoc") THEN 'ASEGURADO PRINCIPAL' ELSE 'PAGADOR' END AS "TIPO_CONTRATANTE",
+    CASE WHEN NULLIF(TRIM(TIT."U_numdoc"), '') IS NOT NULL AND TRIM(H."U_contrant") <> TRIM(TIT."U_numdoc") THEN COALESCE(BP."Phone1", '') ELSE COALESCE(NULLIF(TRIM(TC."U_tel"), ''), BP."Phone1", '') END AS "TELEFONO_1",
+    COALESCE(BP."Phone2", '') AS "TELEFONO_2",
+    CASE WHEN NULLIF(TRIM(TIT."U_numdoc"), '') IS NOT NULL AND TRIM(H."U_contrant") <> TRIM(TIT."U_numdoc") THEN COALESCE(BP."Cellular", '') ELSE COALESCE(NULLIF(TRIM(TC."U_cel"), ''), BP."Cellular", '') END AS "CELULAR",
+    CASE WHEN NULLIF(TRIM(TIT."U_numdoc"), '') IS NOT NULL AND TRIM(H."U_contrant") <> TRIM(TIT."U_numdoc") THEN COALESCE(BP."E_Mail", '') ELSE COALESCE(NULLIF(TRIM(TC."U_email"), ''), BP."E_Mail", '') END AS "CORREO",
+    CASE WHEN NULLIF(TRIM(TIT."U_numdoc"), '') IS NOT NULL AND TRIM(H."U_contrant") <> TRIM(TIT."U_numdoc") THEN COALESCE(BP."Address", '') ELSE COALESCE(NULLIF(TRIM(IFNULL(TC."U_dir2", '') || ' ' || IFNULL(TC."U_dir3", '') || ' ' || IFNULL(TC."U_dir5", '')), ''), BP."Address", '') END AS "DIRECCION",
+    (SELECT COUNT(*) FROM CANCELACIONES X WHERE X."CONTRATANTE" = H."U_contrant" AND (TIT."U_fecIng" IS NULL OR X."FECHA_RETIRO" >= TIT."U_fecIng") AND X."FECHA_RETIRO" <= COALESCE(TIT."U_fecRet", N."FECHA_NOVEDAD")) AS "RETIROS_CONTRATANTE",
+    (SELECT COUNT(DISTINCT X."DocEntry") FROM CANCELACIONES X WHERE NULLIF(TRIM(TIT."U_numdoc"), '') IS NOT NULL AND TRIM(X."DOCUMENTO_PRINCIPAL") = TRIM(TIT."U_numdoc") AND (TIT."U_fecIng" IS NULL OR X."FECHA_RETIRO" >= TIT."U_fecIng") AND X."FECHA_RETIRO" <= COALESCE(TIT."U_fecRet", N."FECHA_NOVEDAD")) AS "RETIROS_ASEGURADO_PRINCIPAL",
     COALESCE(H."U_plan", '') AS "CODIGO_PLAN", COALESCE(NULLIF(TRIM(H."U_nompla"), ''), H."U_plan", 'SIN PLAN') AS "PLAN",
     COALESCE(NULLIF(TRIM(H."U_nomVnd"), ''), 'SIN ASESOR') AS "ASESOR",
     COALESCE(NULLIF(TRIM(H."U_sucur"), ''), 'SIN SEDE') AS "SEDE",
@@ -67,6 +82,8 @@ WITH NOVEDADES AS (
   LEFT JOIN ${schema}."@OK1_EXE_MUN" MUN ON TRIM(MUN."U_codMun") = TRIM(C."U_munMM")
   LEFT JOIN ${schema}."@OK1_EXE_ESTADOCONTR" E ON E."Code" = H."U_estado"
   LEFT JOIN ${schema}."@OK1_EXE_ESTADOCONTR" EC ON EC."Code" = N."CODIGO_CAUSAL"
+  LEFT JOIN ${schema}."OCRD" BP ON BP."CardCode" = H."U_contrant"
+  LEFT JOIN ${schema}."@OK1_EXE_TITUBENF" TC ON TC."Code" = TIT."U_numdoc"
   WHERE UPPER(TRIM(IFNULL(H."U_estado", ''))) LIKE 'CANCX%'
     AND COALESCE(TIT."U_fecRet", N."FECHA_NOVEDAD") IS NOT NULL
   UNION ALL
@@ -76,8 +93,12 @@ WITH NOVEDADES AS (
     CASE UPPER(TRIM(IFNULL(B."U_tdbenef", ''))) WHEN 'A' THEN 'ADICIONAL MAYOR' WHEN 'M' THEN 'ADICIONAL MENOR' WHEN 'P' THEN 'MASCOTA' WHEN 'D' THEN 'MASCOTA ADICIONAL' ELSE 'BENEFICIARIO' END,
     CASE WHEN UPPER(TRIM(IFNULL(B."U_tdbenef", ''))) IN ('A','M') THEN 'ADICIONALES PERSONAS' ELSE 'ADICIONALES MASCOTAS' END,
     COALESCE(NULLIF(TRIM(IFNULL(B."U_pape", '') || ' ' || IFNULL(B."U_sape", '') || ' ' || IFNULL(B."U_nombre", '') || ' ' || IFNULL(B."U_snombre", '')), ''), 'SIN NOMBRE'),
-    COALESCE(NULLIF(TRIM(H."U_ncontrat"), ''), 'SIN ASEGURADO PRINCIPAL'),
+    COALESCE(NULLIF(TRIM(IFNULL(TIT."U_pape", '') || ' ' || IFNULL(TIT."U_sape", '') || ' ' || IFNULL(TIT."U_nombre", '') || ' ' || IFNULL(TIT."U_snombre", '')), ''), NULLIF(TRIM(H."U_ncontrat"), ''), 'SIN ASEGURADO PRINCIPAL'),
     COALESCE(NULLIF(TRIM(B."U_numdoc"), ''), 'SIN DOCUMENTO'),
+    COALESCE(NULLIF(TRIM(TIT."U_numdoc"), ''), H."U_contrant", ''),
+    CASE UPPER(TRIM(IFNULL(B."U_tdbenef", ''))) WHEN 'A' THEN 'ADICIONAL MAYOR' WHEN 'M' THEN 'ADICIONAL MENOR' WHEN 'P' THEN 'MASCOTA' WHEN 'D' THEN 'MASCOTA ADICIONAL' ELSE 'SIN CLASIFICAR' END,
+    COALESCE(BC."U_tel", ''), '', COALESCE(BC."U_cel", ''), COALESCE(BC."U_email", ''), COALESCE(NULLIF(TRIM(IFNULL(BC."U_dir2", '') || ' ' || IFNULL(BC."U_dir3", '') || ' ' || IFNULL(BC."U_dir5", '')), ''), ''),
+    NULL, NULL,
     COALESCE(H."U_plan", ''), COALESCE(NULLIF(TRIM(H."U_nompla"), ''), H."U_plan", 'SIN PLAN'), COALESCE(NULLIF(TRIM(H."U_nomVnd"), ''), 'SIN ASESOR'), COALESCE(NULLIF(TRIM(H."U_sucur"), ''), 'SIN SEDE'),
     COALESCE(NULLIF(TRIM(C."U_nconv"), ''), 'SIN ENTIDAD'), COALESCE(NULLIF(TRIM(C."U_empNom"), ''), NULLIF(TRIM(C."U_nconv"), ''), 'SIN ENTIDAD'), COALESCE(C."U_nconv", ''), COALESCE(NULLIF(TRIM(S."Name"), ''), 'SIN SUBUEN'),
     CASE WHEN UPPER(TRIM(IFNULL(B."U_tdbenef", ''))) IN ('P','D') AND TRIM(IFNULL(B."U_parent", '')) = '47' THEN 'PERRO' WHEN UPPER(TRIM(IFNULL(B."U_tdbenef", ''))) IN ('P','D') AND TRIM(IFNULL(B."U_parent", '')) = '48' THEN 'GATO' WHEN UPPER(TRIM(IFNULL(B."U_tdbenef", ''))) IN ('P','D') THEN 'SIN ESPECIE IDENTIFICADA' ELSE 'NO APLICA' END,
@@ -94,12 +115,14 @@ WITH NOVEDADES AS (
     B."U_fecIng", CASE WHEN UPPER(TRIM(IFNULL(H."U_estado", ''))) LIKE 'CANCX%' THEN COALESCE(B."U_fecRet", N."FECHA_NOVEDAD") ELSE B."U_fecRet" END
   FROM ${schema}."@OK1_EXE_CONTR_HEAD" H
   INNER JOIN ${schema}."@OK1_EXE_CONT_BENEFI" B ON B."DocEntry" = H."DocEntry"
+  INNER JOIN TITULAR TIT ON TIT."DocEntry" = H."DocEntry"
   LEFT JOIN NOVEDADES N ON N."DocEntry" = H."DocEntry"
   LEFT JOIN ${schema}."@OK1_EXE_CONV_HEAD" C ON C."DocEntry" = H."U_conve"
   LEFT JOIN ${schema}."@OK1_EXE_SUBUEN" S ON S."Code" = C."U_suen"
   LEFT JOIN ${schema}."@OK1_EXE_MUN" MUN ON TRIM(MUN."U_codMun") = TRIM(C."U_munMM")
   LEFT JOIN ${schema}."@OK1_EXE_ESTADOCONTR" E ON E."Code" = H."U_estado"
   LEFT JOIN ${schema}."@OK1_EXE_ESTADOCONTR" EC ON EC."Code" = N."CODIGO_CAUSAL"
+  LEFT JOIN ${schema}."@OK1_EXE_TITUBENF" BC ON BC."Code" = B."U_numdoc"
   WHERE UPPER(TRIM(IFNULL(B."U_tdbenef", ''))) IN ('A','M','P','D')
     AND (
       UPPER(TRIM(IFNULL(H."U_estado", ''))) LIKE 'CANCX%'

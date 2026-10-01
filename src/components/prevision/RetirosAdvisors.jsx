@@ -12,7 +12,7 @@ const series = [
   ['adicionales_personas', 'Adicionales personas', '#ea580c'], ['adicionales_mascotas', 'Adicionales mascotas', '#7c3aed'],
 ]
 
-export default function RetirosAdvisors({ rows, from, to }) {
+export default function RetirosAdvisors({ rows, from, to, onOpenDetail }) {
   const [selectedAdvisor, setSelectedAdvisor] = useState('')
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState('total')
@@ -51,6 +51,7 @@ export default function RetirosAdvisors({ rows, from, to }) {
     <div className="grid gap-6 xl:grid-cols-3"><ChartCard title={`Causales · ${activeAdvisor}`} subtitle="Principales motivos y participación." accent="rose"><SimpleBars data={causes} /></ChartCard><ChartCard title={`Planes · ${activeAdvisor}`} subtitle="Top 7 planes con retiros." accent="blue"><SimpleBars data={plans} color="#2563eb" /></ChartCard><ChartCard title={`Convenios · ${activeAdvisor}`} subtitle="Top 7 entidades asociadas." accent="orange"><SimpleBars data={entities} color="#ea580c" /></ChartCard></div>
     <ChartCard title={`Distribución por sede y SubUEN · ${activeAdvisor}`} subtitle="Top 8 ubicaciones del portafolio retirado." accent="emerald"><SimpleBars data={locations} color="#0f766e" /></ChartCard>
     <AdvisorTable rows={tableRows} selected={activeAdvisor} onSelect={setSelectedAdvisor} search={search} setSearch={setSearch} sort={sort} setSort={setSort} />
+    <div className="flex justify-end"><button type="button" onClick={() => onOpenDetail?.({ asesor: activeAdvisor })} className="rounded-xl bg-rose-700 px-4 py-2.5 text-sm font-black text-white">Ver detalle filtrado</button></div>
     <AdvisorDetail rows={advisorRows} advisor={activeAdvisor} />
   </div>
 }
