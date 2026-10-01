@@ -1,8 +1,15 @@
 import {
   BadgeDollarSign,
+  Building2,
+  ChartNoAxesCombined,
   ClipboardCheck,
+  Handshake,
+  LayoutDashboard,
   Layers3,
+  Network,
   RefreshCw,
+  TrendingUp,
+  UserRoundSearch,
   UserRoundCheck,
   UsersRound,
 } from "lucide-react";
@@ -38,9 +45,21 @@ import CommercialIncome from "./CommercialIncome.jsx";
 import CommercialPortfolio from "./CommercialPortfolio.jsx";
 import ConventionSummary from "./ConventionSummary.jsx";
 import IncomeFilters from "./IncomeFilters.jsx";
+import PrevisionSubnav from "./PrevisionSubnav.jsx";
 import PlanSummary from "./PlanSummary.jsx";
 import RelationshipSummary from "./RelationshipSummary.jsx";
 import SiteSummary from "./SiteSummary.jsx";
+
+const incomeViews = [
+  { id: "general", label: "Resumen ejecutivo", icon: LayoutDashboard },
+  { id: "comercial", label: "Producción comercial", icon: TrendingUp },
+  { id: "asesores", label: "Responsables", icon: UserRoundSearch },
+  { id: "composicion", label: "Personas protegidas", icon: Network },
+  { id: "sedes", label: "Por sede", icon: Building2 },
+  { id: "planes", label: "Por plan", icon: Layers3 },
+  { id: "convenios", label: "Por convenio", icon: Handshake },
+  { id: "parentescos", label: "Por parentesco", icon: ChartNoAxesCombined },
+];
 
 export default function IncomeOverview({ active = true }) {
   const [rows, setRows] = useState([]);
@@ -49,6 +68,7 @@ export default function IncomeOverview({ active = true }) {
   const [error, setError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [sectionView, setSectionView] = useState("general");
+  const [navCollapsed, setNavCollapsed] = useState(false);
 
   useEffect(() => {
     if (!active) return undefined;
@@ -133,6 +153,7 @@ export default function IncomeOverview({ active = true }) {
         </div>
       )}
       <IncomeFilters
+        sectionView={sectionView}
         filters={filters}
         setFilters={setFilters}
         options={options}
@@ -141,40 +162,12 @@ export default function IncomeOverview({ active = true }) {
         onRefresh={() => setRefreshKey((key) => key + 1)}
       />
 
-      <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-2">
-        <SectionButton active={sectionView === "general"} onClick={() => setSectionView("general")}>
-          Indicadores generales
-        </SectionButton>
-        <SectionButton active={sectionView === "comercial"} onClick={() => setSectionView("comercial")}>
-          Gestión comercial · Responsables
-        </SectionButton>
-        <SectionButton active={sectionView === "asesores"} onClick={() => setSectionView("asesores")}>
-          Resumen por asesor
-        </SectionButton>
-        <SectionButton
-          active={sectionView === "composicion"}
-          onClick={() => {
-            setSectionView("composicion");
-            setFilters((current) => ({ ...current, estado: "TODOS" }));
-          }}
-        >
-          Composición de afiliados
-        </SectionButton>
-        <SectionButton active={sectionView === "sedes"} onClick={() => setSectionView("sedes")}>
-          Resumen por sede
-        </SectionButton>
-        <SectionButton active={sectionView === "planes"} onClick={() => setSectionView("planes")}>
-          Resumen por planes
-        </SectionButton>
-        <SectionButton active={sectionView === "convenios"} onClick={() => setSectionView("convenios")}>
-          Resumen por convenios
-        </SectionButton>
-        <SectionButton active={sectionView === "parentescos"} onClick={() => setSectionView("parentescos")}>
-          Resumen por parentescos
-        </SectionButton>
-      </div>
+      <div className="grid items-start gap-4 lg:grid-cols-[auto_minmax(0,1fr)]">
+        <PrevisionSubnav title="Ingresos" subtitle="Producción y portafolio" items={incomeViews} active={sectionView} onSelect={(view) => { setSectionView(view); setFilters((current) => ({ ...current, plan: "TODOS", convenio: "TODOS", asesor: "TODOS", tipoAfiliado: "TODOS", parentesco: "TODOS", ...(view === "composicion" ? { estado: "TODOS" } : {}) })); }} collapsed={navCollapsed} onToggle={() => setNavCollapsed((value) => !value)} />
+        <div className="min-w-0 space-y-4">
 
-      {sectionView === "general" ? <>
+      {sectionView === "general" ? (
+        <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard
               title="Personas protegidas"
@@ -366,11 +359,57 @@ export default function IncomeOverview({ active = true }) {
               </div>
             </ChartCard>
           )}
-      </> : sectionView === "comercial" ? <CommercialPortfolio rows={filteredRows} /> : sectionView === "asesores" ? <CommercialIncome rows={advisorRows} selectedAdvisor={filters.asesor} onSelectAdvisor={(asesor) => setFilters((current) => ({ ...current, asesor }))} /> : sectionView === "composicion" ? <AffiliateComposition rows={rows} filters={filters} /> : sectionView === "sedes" ? <SiteSummary rows={siteRows} selectedSite={filters.sede} onSelectSite={(sede) => setFilters((current) => ({ ...current, sede }))} /> : sectionView === "planes" ? <PlanSummary rows={planRows} selectedPlan={filters.plan} onSelectPlan={(plan) => setFilters((current) => ({ ...current, plan }))} /> : sectionView === "convenios" ? <ConventionSummary rows={conventionRows} selectedConvention={filters.convenio} onSelectConvention={(convenio) => setFilters((current) => ({ ...current, convenio }))} /> : <RelationshipSummary rows={relationshipRows} selectedRelationship={filters.parentesco} onSelectRelationship={(parentesco) => setFilters((current) => ({ ...current, parentesco }))} />}
+        </>
+      ) : sectionView === "comercial" ? (
+        <CommercialPortfolio rows={filteredRows} />
+      ) : sectionView === "asesores" ? (
+        <CommercialIncome
+          rows={advisorRows}
+          selectedAdvisor={filters.asesor}
+          onSelectAdvisor={(asesor) =>
+            setFilters((current) => ({ ...current, asesor }))
+          }
+        />
+      ) : sectionView === "composicion" ? (
+        <AffiliateComposition rows={rows} filters={filters} />
+      ) : sectionView === "sedes" ? (
+        <SiteSummary
+          rows={siteRows}
+          selectedSite={filters.sede}
+          onSelectSite={(sede) =>
+            setFilters((current) => ({ ...current, sede }))
+          }
+        />
+      ) : sectionView === "planes" ? (
+        <PlanSummary
+          rows={planRows}
+          selectedPlan={filters.plan}
+          onSelectPlan={(plan) =>
+            setFilters((current) => ({ ...current, plan }))
+          }
+        />
+      ) : sectionView === "convenios" ? (
+        <ConventionSummary
+          rows={conventionRows}
+          selectedConvention={filters.convenio}
+          onSelectConvention={(convenio) =>
+            setFilters((current) => ({ ...current, convenio }))
+          }
+        />
+      ) : (
+        <RelationshipSummary
+          rows={relationshipRows}
+          selectedRelationship={filters.parentesco}
+          onSelectRelationship={(parentesco) =>
+            setFilters((current) => ({ ...current, parentesco }))
+          }
+        />
+      )}
+        </div>
+      </div>
     </div>
   );
 }
-
 function IncomeLoading() {
   return (
     <section className="card-shadow rounded-[2rem] border border-slate-200 bg-white px-6 py-14 text-center">
@@ -386,7 +425,7 @@ function IncomeLoading() {
 }
 function ErrorState({ message, onRetry }) {
   return (
-    <section className="card-shadow rounded-[2rem] border border-amber-200 bg-white px-6 py-12 text-center">
+    <section className="card-shadow rounded-4xl border border-amber-200 bg-white px-6 py-12 text-center">
       <h2 className="text-xl font-black text-slate-950">
         No fue posible consultar Ingresos
       </h2>
@@ -400,8 +439,4 @@ function ErrorState({ message, onRetry }) {
       </button>
     </section>
   );
-}
-
-function SectionButton({ active, onClick, children }) {
-  return <button type="button" onClick={onClick} className={`min-h-11 rounded-xl px-5 text-sm font-black transition ${active ? "bg-cyan-950 text-white shadow" : "text-slate-600 hover:bg-cyan-50"}`}>{children}</button>;
 }
