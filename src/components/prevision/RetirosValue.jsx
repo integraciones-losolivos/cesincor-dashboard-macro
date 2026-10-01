@@ -27,18 +27,18 @@ export default function RetirosValue({ rows }) {
 
   return <div className="space-y-6">
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-      <KpiCard title="Valor mensual asociado" value={money(kpis.total)} helper="Cabecera una vez o valor individual cuando el contrato sigue activo." icon={<BadgeDollarSign className="size-6" />} accent="rose" />
-      <KpiCard title="Contratos retirados" value={money(kpis.contractValue)} helper="Valor mensual de contratos únicos cancelados." icon={<Building2 className="size-6" />} accent="emerald" />
+      <KpiCard title="Facturación asociada" value={money(kpis.total)} helper="Facturación del periodo, contabilizada una vez por contrato retirado." icon={<BadgeDollarSign className="size-6" />} accent="rose" />
+      <KpiCard title="Contratos retirados" value={money(kpis.contractValue)} helper="Facturación de contratos únicos cancelados en el periodo." icon={<Building2 className="size-6" />} accent="emerald" />
       <KpiCard title="Retiros empresariales" value={money(kpis.businessValue)} helper="Valor mensual de contratos empresariales." icon={<BriefcaseBusiness className="size-6" />} accent="blue" />
       <KpiCard title="Retiros independientes" value={money(kpis.independentValue)} helper="Valor mensual de contratos independientes." icon={<UserRound className="size-6" />} accent="violet" />
       <KpiCard title="Promedio por unidad valorada" value={money(kpis.average)} helper={`${number(kpis.applicable)} unidades valoradas; ${number(kpis.withoutValue)} con valor cero.`} icon={<Calculator className="size-6" />} accent="orange" />
     </div>
 
-    <div className="rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-950"><strong>Definición:</strong> valor mensual registrado en SAP (`U_valor`). El contrato cancelado se valora una sola vez desde su cabecera. Un adicional o mascota solo suma su valor individual cuando fue retirado sin cancelar el contrato; las líneas derivadas de una cancelación total no duplican el valor.</div>
+    <div className="rounded-2xl border border-cyan-200 bg-cyan-50 px-4 py-3 text-sm text-cyan-950"><strong>Definición:</strong> facturación obtenida de los movimientos `OKEX` de SAP dentro del mismo rango seleccionado. Se toma una sola vez por contrato retirado y se descuentan adicionales, seguros y complementos según la lógica usada en Activos. Los adicionales y mascotas no reciben automáticamente la facturación completa del contrato.</div>
 
     <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-      <ChartCard title={`Valor por ${dimensions[dimension]}`} subtitle="Top 12 por valor mensual asociado." accent="rose"><DimensionSelect value={dimension} onChange={setAnalysis} /><MoneyBars data={summary.slice(0, 12)} onSelect={setSelected} /></ChartCard>
-      <ChartCard title="Valor por canal" subtitle="Adicionales y mascotas solo reflejan retiros individuales con valor propio." accent="blue"><MoneyBars data={buildValueSummary(rows, 'canal')} color="#2563eb" /></ChartCard>
+      <ChartCard title={`Valor por ${dimensions[dimension]}`} subtitle="Top 12 por facturación asociada dentro del periodo." accent="rose"><DimensionSelect value={dimension} onChange={setAnalysis} /><MoneyBars data={summary.slice(0, 12)} onSelect={setSelected} /></ChartCard>
+      <ChartCard title="Valor por canal" subtitle="Adicionales y mascotas permanecen en cero mientras no exista facturación individual validada." accent="blue"><MoneyBars data={buildValueSummary(rows, 'canal')} color="#2563eb" /></ChartCard>
     </div>
 
     <ChartCard title="Evolución mensual del valor" subtitle="Valor mensual asociado agrupado por fecha de retiro y comparado por canal." accent="violet"><div className="h-80"><ResponsiveContainer width="100%" height="100%"><LineChart data={monthly}><CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" vertical={false} /><XAxis dataKey="key" tickFormatter={(key) => monthLabel(`${key}-01`)} /><YAxis tickFormatter={shortMoney} /><Tooltip formatter={(value) => money(value)} labelFormatter={(key) => monthLabel(`${key}-01`)} /><Line type="monotone" dataKey="valor" name="Valor total" stroke="#be123c" strokeWidth={3} />{colors.map(([key, label, color]) => <Line key={key} type="monotone" dataKey={key} name={label} stroke={color} strokeWidth={2} dot={false} />)}</LineChart></ResponsiveContainer></div></ChartCard>

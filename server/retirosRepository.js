@@ -20,8 +20,8 @@ async function queryRetiros(range) {
 }
 
 const loadCachedRange = createPersistentRangeCache({
-  // v14 invalida resultados persistidos antes de conciliar la consulta oficial SAP.
-  namespace: `retiros-v14-${process.env.HANA_SCHEMA || 'default'}`,
+  // v15 incorpora la facturación del periodo y descarta el valor de tarifa U_valor.
+  namespace: `retiros-v15-billing-period-${process.env.HANA_SCHEMA || 'default'}`,
   ttlMs: CACHE_TTL_MS,
   dateField: 'fecha',
   rowKey: (row) => row.id,

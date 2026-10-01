@@ -40,6 +40,7 @@ function normalizeRow(row, index) {
     fechaInicioVigencia: normalizedDate(row.FECHA_INICIO_VIGENCIA),
     fechaNacimiento: normalizedDate(row.FECHA_NACIMIENTO),
     valorFacturado: Number(row.VALOR_FACTURADO || 0),
+    fechaFactura: normalizedDate(row.FECHA_FACTURA),
   }
 }
 

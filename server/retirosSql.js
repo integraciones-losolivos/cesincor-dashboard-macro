@@ -16,9 +16,19 @@ function dateConditions(from, to) {
   return conditions.length ? `WHERE ${conditions.join(' AND ')}` : ''
 }
 
+function rangePredicate(expression, from, to) {
+  const parts = []
+  if (from) parts.push(`${expression} >= TO_DATE('${from}')`)
+  if (to) parts.push(`${expression} < ADD_DAYS(TO_DATE('${to}'), 1)`)
+  return parts.length ? parts.join(' AND ') : '1 = 1'
+}
+
 export function buildRetirosSql({ from = '', to = '' } = {}) {
   const schema = quotedSchema()
   const dates = dateConditions(from, to)
+  const contractRange = rangePredicate('COALESCE(TIT."U_fecRet", N."FECHA_NOVEDAD")', from, to)
+  const additionalRange = rangePredicate('B."U_fecRet"', from, to)
+  const billingRange = rangePredicate('O."RefDate"', from, to)
   return `
 WITH NOVEDADES AS (
   SELECT "DocEntry", "U_fecha" AS "FECHA_NOVEDAD", "U_fecNov" AS "FECHA_FUNCIONAL_NOVEDAD", "U_fecha" AS "FECHA_REGISTRO_NOVEDAD", UPPER(TRIM("U_estNovedad")) AS "CODIGO_CAUSAL", "U_coment" AS "DETALLE_NOVEDAD"
@@ -32,6 +42,56 @@ WITH NOVEDADES AS (
     SELECT B.*, ROW_NUMBER() OVER (PARTITION BY B."DocEntry" ORDER BY B."LineId") AS RN
     FROM ${schema}."@OK1_EXE_CONT_BENEFI" B
     WHERE TRIM(IFNULL(B."U_parent", '')) = '0'
+  ) WHERE RN = 1
+), CONTRATOS_CON_RETIRO AS (
+  SELECT DISTINCT H."DocEntry"
+  FROM ${schema}."@OK1_EXE_CONTR_HEAD" H
+  INNER JOIN TITULAR TIT ON TIT."DocEntry" = H."DocEntry"
+  LEFT JOIN NOVEDADES N ON N."DocEntry" = H."DocEntry"
+  WHERE UPPER(TRIM(IFNULL(H."U_estado", ''))) LIKE 'CANCX%'
+    AND ${contractRange}
+  UNION
+  SELECT DISTINCT B."DocEntry"
+  FROM ${schema}."@OK1_EXE_CONT_BENEFI" B
+  WHERE UPPER(TRIM(IFNULL(B."U_tdbenef", ''))) IN ('A','M','P','D')
+    AND B."U_fecRet" IS NOT NULL
+    AND ${additionalRange}
+), FACTURACION_BASE AS (
+  SELECT
+    CAST(O."U_contra" AS INTEGER) AS "DOCENTRY",
+    O."TransId" AS "TRANSID",
+    O."RefDate" AS "FECHA_FACTURA",
+    CASE WHEN (
+      CASE WHEN EXISTS (
+        SELECT 1 FROM ${schema}."@OK1_EXE_FACT_OJDT" F0
+        WHERE F0."U_TransIdOJDT" = O."TransId" AND CAST(F0."U_contra" AS NVARCHAR) = CAST(O."U_contra" AS NVARCHAR)
+      ) THEN COALESCE((
+        SELECT SUM(IFNULL(F1."U_LocTotal", 0)) FROM ${schema}."@OK1_EXE_FACT_OJDT" F1
+        WHERE F1."U_TransIdOJDT" = O."TransId" AND CAST(F1."U_contra" AS NVARCHAR) = CAST(O."U_contra" AS NVARCHAR)
+      ), 0) ELSE IFNULL(O."LocTotal", 0) END
+      - COALESCE((SELECT SUM(CASE WHEN D."U_valorAdicional" IS NULL OR TRIM(D."U_valorAdicional") = '' THEN 0 ELSE TO_DOUBLE(REPLACE(D."U_valorAdicional", ',00', '')) END)
+          FROM ${schema}."@OK1_EXE_DETFACT" D
+          WHERE CAST(D."U_numContrato" AS NVARCHAR) = CAST(O."U_contra" AS NVARCHAR)
+            AND CAST(D."U_numFactura" AS NVARCHAR) = CAST(O."U_nFactExe" AS NVARCHAR)
+            AND (D."U_tipoBenf" IN ('A','M','P','D') OR NULLIF(TRIM(D."U_codPlanAsis"), '') IS NOT NULL)), 0)
+      - COALESCE((SELECT SUM(IFNULL(J."Credit", 0)) FROM ${schema}."JDT1" J WHERE J."TransId" = O."TransId" AND (J."Ref2" LIKE 'SOLICA%' OR J."Ref2" LIKE 'AP%' OR J."Ref2" LIKE 'SINER%')), 0)
+      - COALESCE((SELECT SUM(IFNULL(J."Credit", 0)) FROM ${schema}."JDT1" J WHERE J."TransId" = O."TransId" AND O."Ref3" LIKE '%FACTCOMPL%' AND IFNULL(J."Credit", 0) <> 0), 0)
+    ) < 0 THEN 0 ELSE (
+      CASE WHEN EXISTS (SELECT 1 FROM ${schema}."@OK1_EXE_FACT_OJDT" F0 WHERE F0."U_TransIdOJDT" = O."TransId" AND CAST(F0."U_contra" AS NVARCHAR) = CAST(O."U_contra" AS NVARCHAR))
+        THEN COALESCE((SELECT SUM(IFNULL(F1."U_LocTotal", 0)) FROM ${schema}."@OK1_EXE_FACT_OJDT" F1 WHERE F1."U_TransIdOJDT" = O."TransId" AND CAST(F1."U_contra" AS NVARCHAR) = CAST(O."U_contra" AS NVARCHAR)), 0)
+        ELSE IFNULL(O."LocTotal", 0) END
+      - COALESCE((SELECT SUM(CASE WHEN D."U_valorAdicional" IS NULL OR TRIM(D."U_valorAdicional") = '' THEN 0 ELSE TO_DOUBLE(REPLACE(D."U_valorAdicional", ',00', '')) END) FROM ${schema}."@OK1_EXE_DETFACT" D WHERE CAST(D."U_numContrato" AS NVARCHAR) = CAST(O."U_contra" AS NVARCHAR) AND CAST(D."U_numFactura" AS NVARCHAR) = CAST(O."U_nFactExe" AS NVARCHAR) AND (D."U_tipoBenf" IN ('A','M','P','D') OR NULLIF(TRIM(D."U_codPlanAsis"), '') IS NOT NULL)), 0)
+      - COALESCE((SELECT SUM(IFNULL(J."Credit", 0)) FROM ${schema}."JDT1" J WHERE J."TransId" = O."TransId" AND (J."Ref2" LIKE 'SOLICA%' OR J."Ref2" LIKE 'AP%' OR J."Ref2" LIKE 'SINER%')), 0)
+      - COALESCE((SELECT SUM(IFNULL(J."Credit", 0)) FROM ${schema}."JDT1" J WHERE J."TransId" = O."TransId" AND O."Ref3" LIKE '%FACTCOMPL%' AND IFNULL(J."Credit", 0) <> 0), 0)
+    ) END AS "VALOR_FACTURADO"
+  FROM ${schema}."OJDT" O
+  INNER JOIN CONTRATOS_CON_RETIRO CR ON CR."DocEntry" = CAST(O."U_contra" AS INTEGER)
+  WHERE O."TransCode" = 'OKEX' AND O."U_contra" IS NOT NULL AND ${billingRange}
+), FACTURACION_CONTRATO AS (
+  SELECT "DOCENTRY", "FECHA_FACTURA", "VALOR_FACTURADO"
+  FROM (
+    SELECT F.*, ROW_NUMBER() OVER (PARTITION BY F."DOCENTRY" ORDER BY F."FECHA_FACTURA" DESC, F."TRANSID" DESC) AS RN
+    FROM FACTURACION_BASE F
   ) WHERE RN = 1
 ), CANCELACIONES AS (
   SELECT H."DocEntry", H."U_contrant" AS "CONTRATANTE", TIT."U_numdoc" AS "DOCUMENTO_PRINCIPAL", TIT."U_fecIng" AS "FECHA_INGRESO", COALESCE(TIT."U_fecRet", N."FECHA_NOVEDAD") AS "FECHA_RETIRO"
@@ -65,8 +125,8 @@ WITH NOVEDADES AS (
     'NO APLICA' AS "ESPECIE_MASCOTA",
     COALESCE(C."U_munMM", '') AS "CODIGO_MUNICIPIO",
     COALESCE(NULLIF(TRIM(MUN."U_Municip"), ''), 'SIN MUNICIPIO') AS "MUNICIPIO",
-    COALESCE(H."U_valor", 0) AS "VALOR_ASOCIADO",
-    'VALOR MENSUAL DEL CONTRATO' AS "TIPO_VALOR",
+    COALESCE(FC."VALOR_FACTURADO", 0) AS "VALOR_ASOCIADO",
+    'FACTURACIÓN DEL CONTRATO EN EL PERIODO' AS "TIPO_VALOR",
     1 AS "APLICA_VALOR",
     CASE WHEN UPPER(TRIM(IFNULL(H."U_estado", ''))) = 'CANCXMORA' THEN 'CANCELADO POR MORA' ELSE COALESCE(E."Name", H."U_estado", 'SIN ESTADO') END AS "ESTADO_CONTRATO",
     COALESCE(NULLIF(TRIM(EC."Name"), ''), NULLIF(TRIM(N."CODIGO_CAUSAL"), ''), 'SIN CAUSAL IDENTIFICADA') AS "CAUSAL_RETIRO",
@@ -84,6 +144,7 @@ WITH NOVEDADES AS (
   LEFT JOIN ${schema}."@OK1_EXE_ESTADOCONTR" EC ON EC."Code" = N."CODIGO_CAUSAL"
   LEFT JOIN ${schema}."OCRD" BP ON BP."CardCode" = H."U_contrant"
   LEFT JOIN ${schema}."@OK1_EXE_TITUBENF" TC ON TC."Code" = TIT."U_numdoc"
+  LEFT JOIN FACTURACION_CONTRATO FC ON FC."DOCENTRY" = H."DocEntry"
   WHERE UPPER(TRIM(IFNULL(H."U_estado", ''))) LIKE 'CANCX%'
     AND COALESCE(TIT."U_fecRet", N."FECHA_NOVEDAD") IS NOT NULL
   UNION ALL
@@ -103,9 +164,9 @@ WITH NOVEDADES AS (
     COALESCE(NULLIF(TRIM(C."U_nconv"), ''), 'SIN ENTIDAD'), COALESCE(NULLIF(TRIM(C."U_empNom"), ''), NULLIF(TRIM(C."U_nconv"), ''), 'SIN ENTIDAD'), COALESCE(C."U_nconv", ''), COALESCE(NULLIF(TRIM(S."Name"), ''), 'SIN SUBUEN'),
     CASE WHEN UPPER(TRIM(IFNULL(B."U_tdbenef", ''))) IN ('P','D') AND TRIM(IFNULL(B."U_parent", '')) = '47' THEN 'PERRO' WHEN UPPER(TRIM(IFNULL(B."U_tdbenef", ''))) IN ('P','D') AND TRIM(IFNULL(B."U_parent", '')) = '48' THEN 'GATO' WHEN UPPER(TRIM(IFNULL(B."U_tdbenef", ''))) IN ('P','D') THEN 'SIN ESPECIE IDENTIFICADA' ELSE 'NO APLICA' END,
     COALESCE(C."U_munMM", ''), COALESCE(NULLIF(TRIM(MUN."U_Municip"), ''), 'SIN MUNICIPIO'),
-    CASE WHEN UPPER(TRIM(IFNULL(H."U_estado", ''))) LIKE 'CANCX%' THEN 0 ELSE COALESCE(B."U_valor", 0) END,
-    CASE WHEN UPPER(TRIM(IFNULL(H."U_estado", ''))) LIKE 'CANCX%' THEN 'INCLUIDO EN VALOR MENSUAL DEL CONTRATO' ELSE 'VALOR MENSUAL INDIVIDUAL' END,
-    CASE WHEN UPPER(TRIM(IFNULL(H."U_estado", ''))) LIKE 'CANCX%' THEN 0 ELSE 1 END,
+    0,
+    'SIN FACTURACIÓN INDIVIDUAL VALIDADA',
+    0,
     CASE WHEN UPPER(TRIM(IFNULL(H."U_estado", ''))) = 'CANCXMORA' THEN 'CANCELADO POR MORA' ELSE COALESCE(E."Name", H."U_estado", 'SIN ESTADO') END,
     CASE WHEN UPPER(TRIM(IFNULL(H."U_estado", ''))) LIKE 'CANCX%' THEN COALESCE(NULLIF(TRIM(EC."Name"), ''), NULLIF(TRIM(N."CODIGO_CAUSAL"), ''), 'SIN CAUSAL IDENTIFICADA') ELSE 'SIN CAUSAL IDENTIFICADA' END,
     CASE WHEN UPPER(TRIM(IFNULL(H."U_estado", ''))) LIKE 'CANCX%' THEN COALESCE(N."CODIGO_CAUSAL", '') ELSE '' END,
