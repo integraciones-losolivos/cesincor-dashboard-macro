@@ -1,6 +1,7 @@
 import { normalizeText } from './dashboard.js'
 
 export const RETIRO_TODOS = 'TODOS'
+export const RETIRO_CHANNELS = ['EMPRESARIALES', 'INDEPENDIENTES', 'ADICIONALES PERSONAS', 'ADICIONALES MASCOTAS']
 
 export const initialRetirosFilters = {
   search: '',
@@ -159,4 +160,95 @@ export function buildCausalMonthly(rows, causal) {
   const selected = causal ? rows.filter((row) => row.causal_retiro === causal) : rows
   const bounds = selected.map((row) => row.fecha).filter(Boolean).sort()
   return buildRetirosMonthly(selected, { from: bounds[0], to: bounds.at(-1) })
+}
+
+function channelCount(rows, channel) {
+  const selected = rows.filter((row) => row.canal === channel)
+  if (channel === 'EMPRESARIALES' || channel === 'INDEPENDIENTES') {
+    return new Set(selected.map((row) => row.contrato)).size
+  }
+  return selected.length
+}
+
+function topNames(rows, key, limit = 3) {
+  const grouped = new Map()
+  rows.forEach((row) => {
+    const name = row[key] || 'SIN DEFINIR'
+    const current = grouped.get(name) || []
+    current.push(row)
+    grouped.set(name, current)
+  })
+  return [...grouped.entries()].map(([name, entries]) => ({ name, cantidad: channelCount(entries, entries[0]?.canal) }))
+    .sort((a, b) => b.cantidad - a.cantidad).slice(0, limit)
+}
+
+export function buildChannelSummary(rows) {
+  const total = buildRetirosKpis(rows).total
+  return RETIRO_CHANNELS.map((name) => {
+    const channelRows = rows.filter((row) => row.canal === name)
+    const cantidad = channelCount(channelRows, name)
+    return {
+      name,
+      cantidad,
+      porcentaje: total ? cantidad / total : 0,
+      contratos: name === 'EMPRESARIALES' || name === 'INDEPENDIENTES' ? cantidad : 0,
+      adicionales: name === 'ADICIONALES PERSONAS' ? cantidad : 0,
+      mascotas: name === 'ADICIONALES MASCOTAS' ? cantidad : 0,
+      planes: topNames(channelRows, 'plan'),
+      sedes: topNames(channelRows, 'sede'),
+    }
+  })
+}
+
+export function buildChannelDimension(rows, key, { limit = 8 } = {}) {
+  const grouped = new Map()
+  rows.forEach((row) => {
+    const name = row[key] || 'SIN DEFINIR'
+    const current = grouped.get(name) || []
+    current.push(row)
+    grouped.set(name, current)
+  })
+  return [...grouped.entries()].map(([name, entries]) => {
+    const item = { name, total: 0 }
+    RETIRO_CHANNELS.forEach((channel) => {
+      const keyName = channel.toLowerCase().replaceAll(' ', '_')
+      item[keyName] = channelCount(entries, channel)
+      item.total += item[keyName]
+    })
+    return item
+  }).sort((a, b) => b.total - a.total).slice(0, limit)
+}
+
+export function groupRetirosCounted(rows, key, { limit } = {}) {
+  const grouped = new Map()
+  rows.forEach((row) => {
+    const name = row[key] || 'SIN DEFINIR'
+    const current = grouped.get(name) || []
+    current.push(row)
+    grouped.set(name, current)
+  })
+  const result = [...grouped.entries()].map(([name, entries]) => ({ name, cantidad: buildRetirosKpis(entries).total }))
+    .sort((a, b) => b.cantidad - a.cantidad || a.name.localeCompare(b.name))
+  return limit ? result.slice(0, limit) : result
+}
+
+export function buildAdvisorSummary(rows) {
+  const total = buildRetirosKpis(rows).total
+  const grouped = new Map()
+  rows.forEach((row) => {
+    const name = row.asesor || 'SIN ASESOR'
+    const current = grouped.get(name) || []
+    current.push(row)
+    grouped.set(name, current)
+  })
+  return [...grouped.entries()].map(([name, entries]) => {
+    const kpis = buildRetirosKpis(entries)
+    const channels = buildChannelSummary(entries)
+    const cause = buildCausalSummary(entries)[0]
+    return {
+      name, total: kpis.total, contratos: kpis.contratos, adicionales: kpis.adicionales, mascotas: kpis.mascotas,
+      empresariales: channels[0].cantidad, independientes: channels[1].cantidad,
+      porcentaje: total ? kpis.total / total : 0, principalCausal: cause?.name || 'SIN CAUSAL IDENTIFICADA',
+    }
+  }).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
 }
