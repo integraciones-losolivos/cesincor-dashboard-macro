@@ -24,7 +24,7 @@ export function filterRetiros(rows, filters) {
   return rows.filter((row) => (
     (!filters.fechaInicial || row.fecha >= filters.fechaInicial) &&
     (!filters.fechaFinal || row.fecha <= filters.fechaFinal) &&
-    (!search || [row.contrato, row.documento, row.nombre, row.entidad, row.plan, row.asesor]
+    (!search || [row.contrato, row.documento, row.nombre, row.numero_convenio, row.entidad, row.nombre_entidad, row.plan, row.asesor]
       .map(normalizeText).some((value) => value.includes(search))) &&
     (filters.canal === RETIRO_TODOS || row.canal === filters.canal) &&
     (filters.sede === RETIRO_TODOS || row.sede === filters.sede) &&
@@ -343,6 +343,34 @@ export function buildRetirosMonthly(rows, { from = '', to = '' } = {}) {
     const variacionPorcentual = previous ? variacion / previous : null
     previous = total
     return { ...item, contratos, empresariales, independientes, total, variacion, variacionPorcentual }
+  })
+}
+
+export function timelineKey(dateValue, granularity = 'monthly') {
+  if (!dateValue || granularity === 'monthly') return dateValue?.slice(0, 7) || ''
+  if (granularity === 'daily') return dateValue.slice(0, 10)
+  const date = new Date(`${dateValue.slice(0, 10)}T00:00:00`)
+  const day = date.getDay() || 7
+  date.setDate(date.getDate() - day + 1)
+  return date.toISOString().slice(0, 10)
+}
+
+export function buildRetirosTimeline(rows, granularity = 'monthly', range = {}) {
+  if (granularity === 'monthly') return buildRetirosMonthly(rows, range)
+  const grouped = new Map()
+  rows.forEach((row) => { const key = timelineKey(row.fecha, granularity); if (!key) return; const current = grouped.get(key) || []; current.push(row); grouped.set(key, current) })
+  let previous = null
+  return [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, entries]) => {
+    const kpis = buildRetirosKpis(entries)
+    const empresariales = new Set(entries.filter((row) => row.canal === 'EMPRESARIALES').map((row) => row.contrato)).size
+    const independientes = new Set(entries.filter((row) => row.canal === 'INDEPENDIENTES').map((row) => row.contrato)).size
+    const item = { key, total: kpis.total, contratos: kpis.contratos, adicionales: kpis.adicionales, mascotas: kpis.mascotas, empresariales, independientes,
+      adicionalMayor: entries.filter((row) => row.codigo_tipo === 'A').length, adicionalMenor: entries.filter((row) => row.codigo_tipo === 'M').length,
+      mascota: entries.filter((row) => row.codigo_tipo === 'P').length, mascotaAdicional: entries.filter((row) => row.codigo_tipo === 'D').length }
+    item.variacion = previous === null ? null : item.total - previous
+    item.variacionPorcentual = previous ? item.variacion / previous : null
+    previous = item.total
+    return item
   })
 }
 

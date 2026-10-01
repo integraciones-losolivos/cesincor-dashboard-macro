@@ -21,9 +21,9 @@ export function buildRetirosSql({ from = '', to = '' } = {}) {
   const dates = dateConditions(from, to)
   return `
 WITH NOVEDADES AS (
-  SELECT "DocEntry", COALESCE("U_fecNov", "U_fecha") AS "FECHA_NOVEDAD", "U_fecha" AS "FECHA_REGISTRO_NOVEDAD", UPPER(TRIM("U_estNovedad")) AS "CODIGO_CAUSAL", "U_coment" AS "DETALLE_NOVEDAD"
+  SELECT "DocEntry", "U_fecha" AS "FECHA_NOVEDAD", "U_fecNov" AS "FECHA_FUNCIONAL_NOVEDAD", "U_fecha" AS "FECHA_REGISTRO_NOVEDAD", UPPER(TRIM("U_estNovedad")) AS "CODIGO_CAUSAL", "U_coment" AS "DETALLE_NOVEDAD"
   FROM (
-    SELECT C.*, ROW_NUMBER() OVER (PARTITION BY C."DocEntry" ORDER BY COALESCE(C."U_fecNov", C."U_fecha") DESC, C."U_fecha" DESC, C."LineId" DESC) AS RN
+    SELECT C.*, ROW_NUMBER() OVER (PARTITION BY C."DocEntry" ORDER BY C."U_fecha" DESC, C."LineId" DESC) AS RN
     FROM ${schema}."@OK1_EXE_COMEN_CONTR" C
     WHERE UPPER(TRIM(IFNULL(C."U_estNovedad", ''))) LIKE 'CANCX%'
   ) WHERE RN = 1
