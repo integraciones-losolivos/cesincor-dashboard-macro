@@ -269,11 +269,13 @@ export function groupRetiros(rows, key, { limit } = {}) {
   const grouped = new Map()
   rows.forEach((row) => {
     const name = row[key] || 'SIN DEFINIR'
-    const current = grouped.get(name) || { name, cantidad: 0 }
-    current.cantidad += 1
+    const current = grouped.get(name) || { name, rows: [] }
+    current.rows.push(row)
     grouped.set(name, current)
   })
-  const result = [...grouped.values()].sort((a, b) => b.cantidad - a.cantidad || a.name.localeCompare(b.name))
+  const result = [...grouped.values()]
+    .map(({ name, rows: groupedRows }) => ({ name, cantidad: buildRetirosKpis(groupedRows).total }))
+    .sort((a, b) => b.cantidad - a.cantidad || a.name.localeCompare(b.name))
   return limit ? result.slice(0, limit) : result
 }
 
@@ -291,11 +293,13 @@ export function groupRetirosBySede(rows) {
     const sede = row.sede || 'SIN SEDE'
     const subuen = row.subuen || 'SIN SUBUEN'
     const key = `${sede}\u0000${subuen}`
-    const current = grouped.get(key) || { name: sede, subuen, cantidad: 0 }
-    current.cantidad += 1
+    const current = grouped.get(key) || { name: sede, subuen, rows: [] }
+    current.rows.push(row)
     grouped.set(key, current)
   })
-  return [...grouped.values()].sort((a, b) => b.cantidad - a.cantidad).slice(0, 10)
+  return [...grouped.values()]
+    .map(({ name, subuen, rows: groupedRows }) => ({ name, subuen, cantidad: buildRetirosKpis(groupedRows).total }))
+    .sort((a, b) => b.cantidad - a.cantidad).slice(0, 10)
 }
 
 function monthKeys(from, to, rows) {

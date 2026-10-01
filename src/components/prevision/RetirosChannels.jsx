@@ -5,7 +5,7 @@ import ChartCard from '../ChartCard.jsx'
 import CustomTooltip from '../CustomTooltip.jsx'
 import KpiCard from '../KpiCard.jsx'
 import { monthLabel, number, percent } from '../../utils/dashboard.js'
-import { buildCausalSummary, buildChannelDimension, buildChannelSummary, buildRetirosMonthly, groupRetiros, RETIRO_CHANNELS } from '../../utils/retiros.js'
+import { buildCausalSummary, buildChannelDimension, buildChannelSummary, buildRetirosKpis, buildRetirosMonthly, groupRetiros, RETIRO_CHANNELS } from '../../utils/retiros.js'
 
 const channelConfig = [
   { name: 'EMPRESARIALES', monthly: 'empresariales', dataKey: 'empresariales', label: 'Empresariales', color: '#0f766e' },
@@ -16,7 +16,7 @@ const channelConfig = [
 
 export default function RetirosChannels({ rows, from, to, onOpenDetail }) {
   const summary = useMemo(() => buildChannelSummary(rows), [rows])
-  const total = summary.reduce((sum, item) => sum + item.cantidad, 0)
+  const total = useMemo(() => buildRetirosKpis(rows).total, [rows])
   const leader = summary.reduce((best, item) => !best || item.cantidad > best.cantidad ? item : best, null)
   const [selectedChannel, setSelectedChannel] = useState('')
   const [visibleChannels, setVisibleChannels] = useState(() => new Set(RETIRO_CHANNELS))
