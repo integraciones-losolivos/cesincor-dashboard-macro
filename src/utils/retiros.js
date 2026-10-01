@@ -252,3 +252,25 @@ export function buildAdvisorSummary(rows) {
     }
   }).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
 }
+
+export function buildPlanSummary(rows) {
+  const total = buildRetirosKpis(rows).total
+  const grouped = new Map()
+  rows.forEach((row) => {
+    const name = row.plan || 'SIN PLAN'
+    const current = grouped.get(name) || []
+    current.push(row)
+    grouped.set(name, current)
+  })
+  return [...grouped.entries()].map(([name, entries]) => {
+    const kpis = buildRetirosKpis(entries)
+    const channels = buildChannelSummary(entries)
+    const cause = buildCausalSummary(entries)[0]
+    return {
+      name, codigo: entries[0]?.codigo_plan || '', total: kpis.total, contratos: kpis.contratos,
+      adicionales: kpis.adicionales, mascotas: kpis.mascotas, empresariales: channels[0].cantidad,
+      independientes: channels[1].cantidad, porcentaje: total ? kpis.total / total : 0,
+      principalCausal: cause?.name || 'SIN CAUSAL IDENTIFICADA',
+    }
+  }).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
+}
