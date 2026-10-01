@@ -1,6 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { ClipboardX, LogOut, PawPrint, RefreshCw, UserMinus } from 'lucide-react'
+import {
+  BadgeDollarSign,
+  CircleAlert,
+  ClipboardX,
+  Clock3,
+  GitBranch,
+  Layers,
+  LayoutDashboard,
+  LogOut,
+  MapPinned,
+  PawPrint,
+  RefreshCw,
+  TrendingDown,
+  UserMinus,
+  Users,
+} from 'lucide-react'
 import ChartCard from '../components/ChartCard.jsx'
 import CustomTooltip from '../components/CustomTooltip.jsx'
 import EmptyState from '../components/EmptyState.jsx'
@@ -21,6 +36,18 @@ import { buildRetirosComposition, buildRetirosKpis, filterRetiros, groupRetiros,
 const colors = ['#be123c', '#ea580c', '#2563eb', '#0f766e', '#7c3aed', '#ca8a04']
 const DATA_YEAR = new Date().getFullYear()
 const defaultFilters = { ...initialRetirosFilters }
+const retiroViews = [
+  { id: 'resumen', label: 'Resumen general', icon: LayoutDashboard },
+  { id: 'evolucion', label: 'Evolución de retiros', icon: TrendingDown },
+  { id: 'causales', label: 'Causales de retiro', icon: CircleAlert },
+  { id: 'canales', label: 'Retiros por canal', icon: GitBranch },
+  { id: 'asesores', label: 'Retiros por asesor', icon: Users },
+  { id: 'planes', label: 'Retiros por plan', icon: Layers },
+  { id: 'territorios', label: 'Retiros por territorio', icon: MapPinned },
+  { id: 'valor', label: 'Valor asociado', icon: BadgeDollarSign },
+  { id: 'permanencia', label: 'Permanencia de adicionales', icon: Clock3 },
+  { id: 'mascotas', label: 'Retiros de mascotas', icon: PawPrint },
+]
 const yearRange = (year) => ({ from: `${year}-01-01`, to: `${year}-12-31` })
 function mergeRows(current, incoming) { const map = new Map(current.map((row) => [row.id, row])); incoming.forEach((row) => map.set(row.id, row)); return [...map.values()] }
 
@@ -91,7 +118,7 @@ export default function RetirosDashboard({ areaName = 'Retiros', embedded = fals
     {!embedded && <section className="border-b border-rose-100 bg-gradient-to-br from-rose-950 via-rose-800 to-orange-600 px-4 py-10 text-white sm:px-6 lg:px-8"><div className="mx-auto flex max-w-7xl items-center gap-4"><div className="grid size-14 place-items-center rounded-[1.4rem] border border-white/15 bg-white/10"><LogOut className="size-7" /></div><div><p className="text-xs font-black uppercase tracking-[0.28em] text-rose-100">Previsión · Submódulo independiente</p><h1 className="mt-1 font-heading text-4xl font-bold sm:text-5xl">{areaName}</h1><p className="mt-2 text-sm text-rose-100">Resumen ejecutivo de contratos, adicionales y mascotas retirados.</p></div></div></section>}
     <section className={embedded ? 'space-y-6' : 'mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8'}>
       <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-        {[['resumen', 'Resumen general'], ['evolucion', 'Evolución de retiros'], ['causales', 'Causales de retiro'], ['canales', 'Retiros por canal'], ['asesores', 'Retiros por asesor'], ['planes', 'Retiros por plan'], ['territorios', 'Retiros por territorio'], ['valor', 'Valor asociado'], ['permanencia', 'Permanencia de adicionales'], ['mascotas', 'Retiros de mascotas']].map(([id, label]) => <button key={id} type="button" onClick={() => setActiveView(id)} className={`rounded-xl px-4 py-2.5 text-sm font-black transition ${activeView === id ? 'bg-rose-700 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}>{label}</button>)}
+        {retiroViews.map(({ id, label, icon: Icon }) => <button key={id} type="button" title={label} aria-current={activeView === id ? 'page' : undefined} onClick={() => setActiveView(id)} className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-black transition ${activeView === id ? 'bg-rose-700 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}><Icon className="size-4 shrink-0" strokeWidth={2.25} aria-hidden="true" /><span>{label}</span></button>)}
       </div>
       <RetirosFilters filters={filters} options={options} setFilter={setFilter} reset={() => setFilters(defaultFilters)} refreshData={refreshData} loadingHistory={loadingHistory} historyReady={historyReady} resultCount={filtered.length} />
       {error && rows.length ? <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">{error} Se conservan los datos disponibles en caché.</div> : null}
