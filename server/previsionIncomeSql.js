@@ -17,9 +17,18 @@ function incomeDateCondition(from, to) {
   return conditions.length ? conditions.join('\n      AND ') : '1 = 1'
 }
 
+function billingDateCondition(from, to, alias = 'O') {
+  const validDate = /^\d{4}-\d{2}-\d{2}$/
+  const conditions = []
+  if (from && validDate.test(from)) conditions.push(`${alias}."RefDate" >= TO_DATE('${from}')`)
+  if (to && validDate.test(to)) conditions.push(`${alias}."RefDate" < ADD_DAYS(TO_DATE('${to}'), 1)`)
+  return conditions.length ? `AND ${conditions.join(`\n    AND `)}` : ''
+}
+
 export function buildPrevisionIncomeSql({ from = '', to = '' } = {}) {
   const schema = quotedSchema()
   const dateCondition = incomeDateCondition(from, to)
+  const billingDates = billingDateCondition(from, to)
 
   return `
 WITH TITULAR AS (
@@ -245,6 +254,7 @@ FACTURACION_EMPRESA AS (
   LEFT JOIN FACT_COMPLEMENTO_EMPRESA FCE
     ON FCE."DOCENTRY" = CAST(F."U_contra" AS INTEGER) AND FCE."TRANSID" = O."TransId"
   WHERE O."TransCode" = 'OKEX' AND F."U_contra" IS NOT NULL
+    ${billingDates}
   GROUP BY F."U_contra", O."TransId", O."U_nFactExe", O."RefDate"
 ),
 FACTURACION_DIRECTA AS (
@@ -276,6 +286,7 @@ FACTURACION_DIRECTA AS (
   LEFT JOIN FACT_COMPLEMENTO_DIRECTO FCD ON FCD."DOCENTRY" = CAST(O."U_contra" AS INTEGER) AND FCD."TRANSID" = O."TransId"
   WHERE O."TransCode" = 'OKEX'
     AND O."U_contra" IS NOT NULL
+    ${billingDates}
     AND NOT EXISTS (
       SELECT 1
       FROM ${schema}."@OK1_EXE_FACT_OJDT" FX
@@ -310,6 +321,7 @@ SELECT
   P."SEDE",
   COALESCE(NULLIF(TRIM(P."ASESOR_CONTRATO"), ''), 'N/A') AS "ASESOR",
   CASE WHEN P."TIPO_BENEFICIARIO" = 'TITULAR' THEN FC."VALOR_FACTURADO" ELSE NULL END AS "VALOR_FACTURADO",
+  CASE WHEN P."TIPO_BENEFICIARIO" = 'TITULAR' THEN TO_VARCHAR(FC."FECHA_FACTURA", 'YYYY-MM-DD') ELSE NULL END AS "FECHA_FACTURA",
   P."TIPO_BENEFICIARIO",
   CASE
     WHEN P."TIPO_BENEFICIARIO" = 'TITULAR' THEN 'TITULAR'

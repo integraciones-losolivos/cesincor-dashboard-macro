@@ -5,7 +5,7 @@ const memoryCache = new Map()
 const DB_NAME = 'crystal-dashboard-cache'
 const STORE_NAME = 'prevision-income'
 
-function cacheKey(from, to) { return `v2:${from || 'all'}:${to || 'all'}` }
+function cacheKey(from, to) { return `v3-billing-period:${from || 'all'}:${to || 'all'}` }
 
 function openCache() {
   if (typeof indexedDB === 'undefined') return Promise.resolve(null)

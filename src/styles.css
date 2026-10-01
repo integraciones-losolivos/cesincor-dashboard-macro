@@ -62,3 +62,32 @@ table,
 .recharts-wrapper text {
   font-family: "Raleway", Inter, ui-sans-serif, system-ui, sans-serif !important;
 }
+
+/* Densidad ejecutiva limitada al área de Previsión. */
+.prevision-bi article.card-shadow {
+  border-radius: 1.25rem;
+  padding: 1rem;
+}
+
+.prevision-bi article.card-shadow h3 {
+  font-size: 1.35rem;
+  line-height: 1.65rem;
+}
+
+.prevision-bi section.card-shadow {
+  border-radius: 1.25rem;
+}
+
+.prevision-bi section.card-shadow > div:first-child[class*="border-b"] {
+  padding: .85rem 1rem;
+}
+
+.prevision-bi section.card-shadow > div:last-child[class="p-5"] {
+  padding: 1rem;
+}
+
+@media (min-width: 1024px) {
+  .prevision-bi .h-96 { height: 20rem; }
+  .prevision-bi .h-80 { height: 18rem; }
+  .prevision-bi .h-72 { height: 16rem; }
+}

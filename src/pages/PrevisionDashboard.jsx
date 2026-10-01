@@ -6,10 +6,10 @@ import {
   HeartHandshake,
   Medal,
   PawPrint,
-  LogOut,
   RefreshCw,
   ShieldCheck,
-  UserPlus,
+  TrendingUp,
+  UserMinus,
   UsersRound,
 } from 'lucide-react'
 import {
@@ -107,12 +107,12 @@ function getAvailableDateRange(rows) {
 }
 
 const reportViews = [
-  { id: 'ingresos', label: 'Ingresos', icon: UserPlus },
+  { id: 'ingresos', label: 'Ingresos', icon: TrendingUp },
   { id: 'activos', label: 'Activos', icon: UsersRound },
   { id: 'contratos', label: 'Contratos y planes', icon: ClipboardList },
   { id: 'valores', label: 'Valores', icon: BadgeDollarSign },
   { id: 'mascotas', label: 'Mascotas', icon: PawPrint },
-  { id: 'retiros', label: 'Retiros', icon: LogOut },
+  { id: 'retiros', label: 'Retiros', icon: UserMinus },
 ]
 
 const CONNECTION_CHECK_MS = 2 * 60 * 1000
@@ -321,7 +321,7 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
   const petSummary = useMemo(() => buildPetSummary(filteredRows), [filteredRows])
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#cffafe_0,#f8fafc_32%,#f8fafc_100%)]">
+    <main className="prevision-bi min-h-screen bg-[radial-gradient(circle_at_top_left,#cffafe_0,#f8fafc_32%,#f8fafc_100%)]">
       <section className="relative overflow-hidden border-b border-cyan-900/20 bg-gradient-to-br from-slate-950 via-cyan-950 to-teal-800 px-4 py-10 text-white sm:px-6 lg:px-8">
         <div className="absolute right-[-5rem] top-[-6rem] h-72 w-72 rounded-full bg-cyan-300/15 blur-3xl" />
         <div className="relative mx-auto flex max-w-7xl flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -340,7 +340,7 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-[1600px] space-y-4 px-4 py-5 sm:px-6 lg:px-8">
         <ReportTabs activeView={activeView} setActiveView={selectView} />
         {visitedViews.has('ingresos') && (
           <div hidden={activeView !== 'ingresos'}>
@@ -509,7 +509,7 @@ function PrevisionLoadingState() {
 
 function ReportTabs({ activeView, setActiveView }) {
   return (
-    <nav className="card-shadow grid gap-2 rounded-2xl border border-slate-200 bg-white p-2 sm:grid-cols-2 xl:grid-cols-5">
+    <nav className="card-shadow flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-2">
       {reportViews.map((view) => {
         const Icon = view.icon
         const isActive = activeView === view.id
@@ -518,7 +518,7 @@ function ReportTabs({ activeView, setActiveView }) {
             key={view.id}
             type="button"
             onClick={() => setActiveView(view.id)}
-            className={`flex h-12 items-center justify-center gap-2 rounded-xl text-sm font-black transition ${
+            className={`flex h-11 min-w-32 flex-1 items-center justify-center gap-2 rounded-xl px-3 text-sm font-black transition ${
               isActive ? 'bg-cyan-950 text-white shadow-lg shadow-cyan-950/15' : 'text-slate-600 hover:bg-cyan-50 hover:text-cyan-950'
             }`}
           >

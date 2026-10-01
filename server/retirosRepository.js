@@ -20,8 +20,8 @@ async function queryRetiros(range) {
 }
 
 const loadCachedRange = createPersistentRangeCache({
-  // v12 invalida filas persistidas antes de incorporar contacto y reincidencia.
-  namespace: `retiros-v12-${process.env.HANA_SCHEMA || 'default'}`,
+  // v15 incorpora la facturación del periodo y descarta el valor de tarifa U_valor.
+  namespace: `retiros-v15-billing-period-${process.env.HANA_SCHEMA || 'default'}`,
   ttlMs: CACHE_TTL_MS,
   dateField: 'fecha',
   rowKey: (row) => row.id,
