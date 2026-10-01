@@ -218,3 +218,37 @@ export function buildChannelDimension(rows, key, { limit = 8 } = {}) {
     return item
   }).sort((a, b) => b.total - a.total).slice(0, limit)
 }
+
+export function groupRetirosCounted(rows, key, { limit } = {}) {
+  const grouped = new Map()
+  rows.forEach((row) => {
+    const name = row[key] || 'SIN DEFINIR'
+    const current = grouped.get(name) || []
+    current.push(row)
+    grouped.set(name, current)
+  })
+  const result = [...grouped.entries()].map(([name, entries]) => ({ name, cantidad: buildRetirosKpis(entries).total }))
+    .sort((a, b) => b.cantidad - a.cantidad || a.name.localeCompare(b.name))
+  return limit ? result.slice(0, limit) : result
+}
+
+export function buildAdvisorSummary(rows) {
+  const total = buildRetirosKpis(rows).total
+  const grouped = new Map()
+  rows.forEach((row) => {
+    const name = row.asesor || 'SIN ASESOR'
+    const current = grouped.get(name) || []
+    current.push(row)
+    grouped.set(name, current)
+  })
+  return [...grouped.entries()].map(([name, entries]) => {
+    const kpis = buildRetirosKpis(entries)
+    const channels = buildChannelSummary(entries)
+    const cause = buildCausalSummary(entries)[0]
+    return {
+      name, total: kpis.total, contratos: kpis.contratos, adicionales: kpis.adicionales, mascotas: kpis.mascotas,
+      empresariales: channels[0].cantidad, independientes: channels[1].cantidad,
+      porcentaje: total ? kpis.total / total : 0, principalCausal: cause?.name || 'SIN CAUSAL IDENTIFICADA',
+    }
+  }).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
+}
