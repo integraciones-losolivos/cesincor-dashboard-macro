@@ -223,6 +223,35 @@ export function buildPetPermanenceDistribution(rows) {
   return PERMANENCE_RANGES.map((range) => ({ name: range.name, cantidad: pets.filter((row) => permanenceRange(row)?.key === range.key).length }))
 }
 
+export function hasContactValue(value) { return String(value || '').trim().length > 0 }
+export function isContactable(row) { return [row.telefono_1, row.telefono_2, row.celular, row.correo].some(hasContactValue) }
+export const QUALITY_ALERTS = [
+  { key: 'SIN_TELEFONO', name: 'Sin teléfono', test: (row) => ![row.telefono_1, row.telefono_2, row.celular].some(hasContactValue) },
+  { key: 'SIN_CORREO', name: 'Sin correo', test: (row) => !hasContactValue(row.correo) },
+  { key: 'SIN_CONTACTO', name: 'Sin teléfono ni correo', test: (row) => !isContactable(row) },
+  { key: 'SIN_DIRECCION', name: 'Sin dirección', test: (row) => !hasContactValue(row.direccion) },
+  { key: 'SIN_ASESOR', name: 'Sin asesor', test: (row) => !hasContactValue(row.asesor) || row.asesor === 'SIN ASESOR' },
+  { key: 'SIN_PLAN', name: 'Sin plan', test: (row) => !hasContactValue(row.plan) || row.plan === 'SIN PLAN' },
+  { key: 'SIN_SEDE', name: 'Sin sede', test: (row) => !hasContactValue(row.sede) || row.sede === 'SIN SEDE' },
+  { key: 'SIN_ENTIDAD', name: 'Sin entidad / convenio', test: (row) => !hasContactValue(row.entidad) || row.entidad === 'SIN ENTIDAD' },
+  { key: 'SIN_FECHA_RETIRO', name: 'Sin fecha de retiro', test: (row) => !hasContactValue(row.fecha) },
+  { key: 'SIN_CANAL', name: 'Sin canal clasificado', test: (row) => !hasContactValue(row.canal) || row.canal === 'SIN CLASIFICAR' },
+]
+export function buildQualityKpis(rows) {
+  const withPhone = rows.filter((row) => [row.telefono_1, row.telefono_2, row.celular].some(hasContactValue)).length
+  const withEmail = rows.filter((row) => hasContactValue(row.correo)).length
+  const contactable = rows.filter(isContactable).length
+  return { total: rows.length, withPhone, withoutPhone: rows.length - withPhone, withEmail, withoutEmail: rows.length - withEmail, contactable, notContactable: rows.length - contactable, contactablePercentage: rows.length ? contactable / rows.length : 0 }
+}
+export function buildQualityAlerts(rows) {
+  return QUALITY_ALERTS.map((alert) => { const matched = rows.filter(alert.test); return { ...alert, cantidad: matched.length, porcentaje: rows.length ? matched.length / rows.length : 0 } })
+}
+export function buildQualityDimension(rows, key) {
+  const grouped = new Map()
+  rows.forEach((row) => { const name = row[key] || 'SIN DEFINIR'; const current = grouped.get(name) || []; current.push(row); grouped.set(name, current) })
+  return [...grouped.entries()].map(([name, entries]) => ({ name, ...buildQualityKpis(entries) })).sort((a, b) => b.notContactable - a.notContactable || b.total - a.total)
+}
+
 export function buildRetirosKpis(rows) {
   const contratos = new Set(rows.filter((row) => row.tipo_registro === 'CONTRATO').map((row) => row.contrato)).size
   const adicionales = rows.filter((row) => row.tipo_registro === 'ADICIONAL').length

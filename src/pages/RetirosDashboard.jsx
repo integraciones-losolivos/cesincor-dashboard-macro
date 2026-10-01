@@ -3,8 +3,10 @@ import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
 import {
   BadgeDollarSign,
   CircleAlert,
+  ClipboardList,
   ClipboardX,
   Clock3,
+  ContactRound,
   GitBranch,
   Layers,
   LayoutDashboard,
@@ -29,6 +31,8 @@ import RetirosTerritories from '../components/prevision/RetirosTerritories.jsx'
 import RetirosValue from '../components/prevision/RetirosValue.jsx'
 import RetirosPermanence from '../components/prevision/RetirosPermanence.jsx'
 import RetirosPets from '../components/prevision/RetirosPets.jsx'
+import RetirosQuality from '../components/prevision/RetirosQuality.jsx'
+import RetirosDetail from '../components/prevision/RetirosDetail.jsx'
 import { fetchRetiros } from '../services/retirosApi.js'
 import { getUniqueOptions, monthLabel, number, percent } from '../utils/dashboard.js'
 import { buildRetirosComposition, buildRetirosKpis, filterRetiros, groupRetiros, groupRetirosBySede, initialRetirosFilters } from '../utils/retiros.js'
@@ -47,6 +51,8 @@ const retiroViews = [
   { id: 'valor', label: 'Valor asociado', icon: BadgeDollarSign },
   { id: 'permanencia', label: 'Permanencia de adicionales', icon: Clock3 },
   { id: 'mascotas', label: 'Retiros de mascotas', icon: PawPrint },
+  { id: 'calidad', label: 'Calidad y contactabilidad', icon: ContactRound },
+  { id: 'detalle', label: 'Detalle de retiros', icon: ClipboardList },
 ]
 const yearRange = (year) => ({ from: `${year}-01-01`, to: `${year}-12-31` })
 function mergeRows(current, incoming) { const map = new Map(current.map((row) => [row.id, row])); incoming.forEach((row) => map.set(row.id, row)); return [...map.values()] }
@@ -112,6 +118,7 @@ export default function RetirosDashboard({ areaName = 'Retiros', embedded = fals
     planes: getUniqueOptions(rows, 'plan'), asesores: getUniqueOptions(rows, 'asesor'), tipos: getUniqueOptions(rows, 'tipo_retiro'), estados: getUniqueOptions(rows, 'estado_contrato'), causas: getUniqueOptions(rows, 'causal_retiro'), municipios: getUniqueOptions(rows, 'municipio'),
   }), [rows])
   const setFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }))
+  const openDetail = (overrides = {}) => { setFilters((current) => ({ ...current, ...overrides })); setActiveView('detalle') }
   const refreshData = () => loadHistory(true).catch((e) => setError(e.message))
 
   return <main className={embedded ? 'space-y-6' : 'min-h-screen bg-[radial-gradient(circle_at_top_left,#ffe4e6_0,#f8fafc_36%,#f8fafc_100%)]'}>
@@ -122,7 +129,7 @@ export default function RetirosDashboard({ areaName = 'Retiros', embedded = fals
       </div>
       <RetirosFilters filters={filters} options={options} setFilter={setFilter} reset={() => setFilters(defaultFilters)} refreshData={refreshData} loadingHistory={loadingHistory} historyReady={historyReady} resultCount={filtered.length} />
       {error && rows.length ? <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900">{error} Se conservan los datos disponibles en caché.</div> : null}
-      {loading ? <div className="grid min-h-72 place-items-center rounded-3xl bg-white font-black text-slate-600">Consultando retiros…</div> : error && !rows.length ? <div className="rounded-3xl bg-white p-8 text-center text-rose-700">{error}</div> : !filtered.length ? <EmptyState /> : activeView === 'evolucion' ? <RetirosEvolution rows={filtered} from={filters.fechaInicial} to={filters.fechaFinal} /> : activeView === 'causales' ? <RetirosCauses rows={filtered} /> : activeView === 'canales' ? <RetirosChannels rows={filtered} from={filters.fechaInicial} to={filters.fechaFinal} /> : activeView === 'asesores' ? <RetirosAdvisors rows={filtered} from={filters.fechaInicial} to={filters.fechaFinal} /> : activeView === 'planes' ? <RetirosPlans rows={filtered} from={filters.fechaInicial} to={filters.fechaFinal} /> : activeView === 'territorios' ? <RetirosTerritories rows={filtered} from={filters.fechaInicial} to={filters.fechaFinal} /> : activeView === 'valor' ? <RetirosValue rows={filtered} /> : activeView === 'permanencia' ? <RetirosPermanence rows={filtered} /> : activeView === 'mascotas' ? <RetirosPets rows={filtered} /> : <>
+      {loading ? <div className="grid min-h-72 place-items-center rounded-3xl bg-white font-black text-slate-600">Consultando retiros…</div> : error && !rows.length ? <div className="rounded-3xl bg-white p-8 text-center text-rose-700">{error}</div> : !filtered.length ? <EmptyState /> : activeView === 'evolucion' ? <RetirosEvolution rows={filtered} from={filters.fechaInicial} to={filters.fechaFinal} /> : activeView === 'causales' ? <RetirosCauses rows={filtered} onOpenDetail={openDetail} /> : activeView === 'canales' ? <RetirosChannels rows={filtered} from={filters.fechaInicial} to={filters.fechaFinal} onOpenDetail={openDetail} /> : activeView === 'asesores' ? <RetirosAdvisors rows={filtered} from={filters.fechaInicial} to={filters.fechaFinal} onOpenDetail={openDetail} /> : activeView === 'planes' ? <RetirosPlans rows={filtered} from={filters.fechaInicial} to={filters.fechaFinal} /> : activeView === 'territorios' ? <RetirosTerritories rows={filtered} from={filters.fechaInicial} to={filters.fechaFinal} /> : activeView === 'valor' ? <RetirosValue rows={filtered} /> : activeView === 'permanencia' ? <RetirosPermanence rows={filtered} /> : activeView === 'mascotas' ? <RetirosPets rows={filtered} /> : activeView === 'calidad' ? <RetirosQuality rows={filtered} /> : activeView === 'detalle' ? <RetirosDetail rows={filtered} /> : <>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard title="Contratos retirados" value={number(kpis.contratos)} helper="Contratos únicos cancelados en el periodo." icon={<ClipboardX className="size-6" />} accent="rose" />
           <KpiCard title="Adicionales personas" value={number(kpis.adicionales)} helper="Personas adicionales A y M retiradas." icon={<UserMinus className="size-6" />} accent="orange" />
