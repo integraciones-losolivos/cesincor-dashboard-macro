@@ -16,6 +16,7 @@ export async function fetchPrevisionBillingSummary(range = {}) {
       planIndependiente: Number(row.PLAN_INDEPENDIENTE || 0),
       diferenciaPlanesEmpresas: Number(row.DIF_PLANES_EMPRESAS || 0),
       diferenciaPlanesIndependientes: Number(row.DIF_PLANES_INDEPENDIENTES || 0),
+      descuentos: Number(row.DESCUENTOS || 0),
       totalValidacion: Number(row.TOTAL_VALIDACION || 0),
       diferenciaValidacion: Number(row.DIFERENCIA_VALIDACION || 0),
     }

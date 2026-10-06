@@ -3,7 +3,7 @@ import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContai
 import { CalendarClock, PawPrint, Search, Sigma, Tag, UsersRound } from 'lucide-react'
 import ChartCard from '../ChartCard.jsx'
 import KpiCard from '../KpiCard.jsx'
-import { DataIllustration, RankingList } from './ExecutiveViz.jsx'
+import { RankingList } from './ExecutiveViz.jsx'
 import { monthLabel, normalizeText, number, percent } from '../../utils/dashboard.js'
 import { buildPetKpis, buildPetMonthly, buildPetPermanenceDistribution, buildPetSummary, permanenceRange, PERMANENCE_RANGES, petRows } from '../../utils/retiros.js'
 
@@ -33,7 +33,7 @@ export default function RetirosPets({ rows }) {
   return <div className="space-y-6">
     <div className="flex flex-wrap gap-3 rounded-2xl border border-slate-200 bg-white p-4"><select value={type} onChange={(event) => setType(event.target.value)} className="h-10 rounded-xl border border-slate-200 px-3 text-sm font-bold"><option value="TODOS">Todas las mascotas</option><option value="P">Mascota</option><option value="D">Mascota adicional</option></select><select value={range} onChange={(event) => setRange(event.target.value)} className="h-10 rounded-xl border border-slate-200 px-3 text-sm font-bold"><option value="TODOS">Todos los rangos</option>{PERMANENCE_RANGES.map((item) => <option key={item.key} value={item.key}>{item.name}</option>)}</select></div>
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-      <KpiCard title="Mascotas retiradas" value={number(kpis.total)} helper={`${percent(kpis.participation)} del total de retiros filtrados.`} icon={<PawPrint className="size-6" />} accent="violet" illustration={<DataIllustration type="pets" />} />
+      <KpiCard title="Mascotas retiradas" value={number(kpis.total)} helper={`${percent(kpis.participation)} del total de retiros filtrados.`} icon={<PawPrint className="size-6" />} accent="violet" />
       <KpiCard title="Mascotas tipo P" value={number(kpis.pet)} helper="Registros clasificados como mascota." icon={<Tag className="size-6" />} accent="blue" />
       <KpiCard title="Mascotas adicionales D" value={number(kpis.additionalPet)} helper="Registros clasificados como mascota adicional." icon={<Tag className="size-6" />} accent="orange" />
       <KpiCard title="Contratos relacionados" value={number(kpis.contracts)} helper="Contratos únicos con retiros de mascotas." icon={<UsersRound className="size-6" />} accent="emerald" />

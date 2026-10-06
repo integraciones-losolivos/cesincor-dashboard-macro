@@ -7,6 +7,7 @@ import { fetchPrevisionBillingSummary } from './previsionBillingRepository.js'
 import { buildIncomeAlertDetails, fetchPrevisionIncomeRows, toPublicIncomeRow } from './previsionIncomeRepository.js'
 import { fetchPrevisionRows } from './previsionRepository.js'
 import { fetchRetiros } from './retirosRepository.js'
+import { fetchReclasificacion } from './reclasificacionRepository.js'
 import { requireAuth, requireModule, supabaseAdmin } from './auth.js'
 import usersRouter from './usersRouter.js'
 
@@ -88,6 +89,7 @@ app.get('/api/prevision/ingresos', requireAuth, requireModule('prevision'), asyn
     const range = {
       from: String(request.query.from || ''),
       to: String(request.query.to || ''),
+      convenio: String(request.query.convenio || ''),
       forceRefresh: String(request.query.refresh || '') === 'true',
     }
     const rows = await fetchPrevisionIncomeRows(range)
@@ -147,6 +149,16 @@ app.get('/api/retiros', requireAuth, requireModule('prevision'), async (request,
   } catch (error) {
     console.error('[api/retiros]', error)
     response.status(500).json({ message: 'No fue posible consultar los retiros.' })
+  }
+})
+
+app.get('/api/retiros/reclasificacion', requireAuth, requireModule('prevision'), async (request, response) => {
+  try {
+    response.json({ rows: await fetchReclasificacion({ vigencia: String(request.query.vigencia || '') }) })
+  } catch (error) {
+    console.error('[api/retiros/reclasificacion]', error)
+    const invalidInput = /fecha de vigencia|formato YYYY-MM-DD/i.test(error.message)
+    response.status(invalidInput ? 400 : 500).json({ message: invalidInput ? error.message : 'No fue posible consultar la reclasificación.' })
   }
 })
 

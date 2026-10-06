@@ -4,7 +4,7 @@ import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
 import ChartCard from '../ChartCard.jsx'
 import CustomTooltip from '../CustomTooltip.jsx'
 import KpiCard from '../KpiCard.jsx'
-import { DataIllustration, RankingList } from './ExecutiveViz.jsx'
+import { RankingList } from './ExecutiveViz.jsx'
 import { money, number } from '../../utils/dashboard.js'
 import { buildCommercialKpis, buildCommercialPortfolio, buildDimensionPortfolio, buildIncomeComposition, buildIncomeSummary } from '../../utils/previsionIncome.js'
 
@@ -32,7 +32,7 @@ export default function CommercialPortfolio({ rows }) {
 
   return <div className="space-y-6">
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <KpiCard title="Responsables activos" value={number(kpis.responsables)} helper="Responsables con al menos un contrato activo." icon={<BriefcaseBusiness className="size-6" />} accent="blue" illustration={<DataIllustration type="advisor" />} />
+      <KpiCard title="Responsables activos" value={number(kpis.responsables)} helper="Responsables con al menos un contrato activo." icon={<BriefcaseBusiness className="size-6" />} accent="blue" />
       <KpiCard title="Convenios activos" value={number(kpis.convenios)} helper="Convenios presentes en el portafolio filtrado." icon={<Network className="size-6" />} accent="emerald" />
       <KpiCard title="Planes activos" value={number(kpis.planes)} helper="Planes asociados a contratos activos." icon={<Building2 className="size-6" />} accent="violet" />
       <KpiCard title="Sedes activas" value={number(kpis.sedes)} helper={`${number(kpis.contratos)} contratos y ${number(kpis.vidas)} personas protegidas.`} icon={<MapPin className="size-6" />} accent="orange" />

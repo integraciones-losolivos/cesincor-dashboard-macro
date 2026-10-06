@@ -86,6 +86,62 @@ table,
   padding: 1rem;
 }
 
+/* Señales visuales consistentes para todos los controles interactivos de Previsión. */
+.prevision-bi button:not(:disabled),
+.prevision-bi select,
+.prevision-bi input[type="date"],
+.prevision-bi input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.prevision-bi button {
+  transition: box-shadow 180ms ease, border-color 180ms ease, background-color 180ms ease, color 180ms ease, opacity 180ms ease;
+}
+
+.prevision-bi button:not(:disabled):hover {
+  box-shadow: 0 5px 14px rgba(15, 23, 42, 0.08);
+}
+
+.prevision-bi button:not(:disabled):active {
+  box-shadow: 0 2px 7px rgba(15, 23, 42, 0.07);
+}
+
+.prevision-bi select {
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.prevision-bi select:hover {
+  border-color: #fda4af;
+  background-color: #fff7f8;
+}
+
+.prevision-bi button:focus-visible,
+.prevision-bi select:focus-visible,
+.prevision-bi input:focus-visible {
+  outline: 2px solid #e11d48;
+  outline-offset: 2px;
+}
+
+.prevision-bi button:disabled {
+  cursor: not-allowed;
+}
+
+.prevision-bi .control {
+  height: 2.5rem;
+  min-width: 0;
+  border: 1px solid #e2e8f0;
+  border-radius: .75rem;
+  background: #fff;
+  padding: 0 .75rem;
+  color: #334155;
+  font-size: .75rem;
+  font-weight: 700;
+  outline: none;
+}
+
+.prevision-bi .control:focus { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(20, 184, 166, .12); }
+.prevision-bi .icon-button { display: grid; width: 2.5rem; height: 2.5rem; place-items: center; border: 1px solid #e2e8f0; border-radius: .75rem; color: #475569; background: #fff; }
+
 @media (min-width: 1024px) {
   .prevision-bi .h-96 { height: 20rem; }
   .prevision-bi .h-80 { height: 18rem; }

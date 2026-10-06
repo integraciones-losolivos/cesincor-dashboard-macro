@@ -4,7 +4,7 @@ import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
 import ChartCard from '../ChartCard.jsx'
 import CustomTooltip from '../CustomTooltip.jsx'
 import KpiCard from '../KpiCard.jsx'
-import { DataIllustration, RankingList } from './ExecutiveViz.jsx'
+import { RankingList } from './ExecutiveViz.jsx'
 import { money, number } from '../../utils/dashboard.js'
 import { buildCommercialKpis, buildCommercialPortfolio, buildDimensionPortfolio, buildIncomeComposition } from '../../utils/previsionIncome.js'
 
@@ -45,7 +45,7 @@ export default function CommercialIncome({ rows, selectedAdvisor, onSelectAdviso
     </div>
 
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <KpiCard title={selected ? 'Asesor seleccionado' : 'Asesores activos'} value={selected ? selected.name : number(kpis.responsables)} helper={selected ? `${number(selected.convenios)} convenios y ${number(selected.planes)} planes asociados.` : 'Responsables con al menos un contrato activo.'} icon={<BriefcaseBusiness className="size-6" />} accent="blue" illustration={<DataIllustration type="advisor" />} />
+      <KpiCard title={selected ? 'Asesor seleccionado' : 'Asesores activos'} value={selected ? selected.name : number(kpis.responsables)} helper={selected ? `${number(selected.convenios)} convenios y ${number(selected.planes)} planes asociados.` : 'Responsables con al menos un contrato activo.'} icon={<BriefcaseBusiness className="size-6" />} accent="blue" />
       <KpiCard title="Contratos activos" value={number(visible.contratos)} helper="Contratos únicos con titular activo." icon={<ClipboardCheck className="size-6" />} accent="emerald" />
       <KpiCard title="Personas protegidas" value={number(visible.vidas)} helper={`${decimal(visible.vidasPorContrato)} protegidos en promedio por contrato.`} icon={<UsersRound className="size-6" />} accent="violet" />
       <KpiCard title="Facturación vigente" value={money(visible.facturacion)} helper="Valor contabilizado una sola vez desde el titular activo." icon={<BadgeDollarSign className="size-6" />} accent="orange" />

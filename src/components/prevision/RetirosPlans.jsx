@@ -11,7 +11,7 @@ import { buildCausalSummary, buildChannelDimension, buildPlanSummary, buildRetir
 const PAGE_SIZE = 10
 const series = [
   ['empresariales', 'Empresariales', '#0f766e'], ['independientes', 'Independientes', '#2563eb'],
-  ['adicionales_personas', 'Adicionales personas', '#ea580c'], ['adicionales_mascotas', 'Adicionales mascotas', '#7c3aed'],
+  ['sin_clasificar', 'Sin clasificar', '#64748b'],
 ]
 
 export default function RetirosPlans({ rows, from, to }) {

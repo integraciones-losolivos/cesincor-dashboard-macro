@@ -8,7 +8,7 @@ import { RankingList } from './ExecutiveViz.jsx'
 import { monthLabel, normalizeText, number, percent } from '../../utils/dashboard.js'
 import { buildCausalSummary, buildRetirosKpis, buildRetirosMonthly, buildTerritorySummary, groupRetirosCounted } from '../../utils/retiros.js'
 
-const series = [['empresariales', 'Empresariales', '#0f766e'], ['independientes', 'Independientes', '#2563eb'], ['adicionales_personas', 'Adicionales personas', '#ea580c'], ['adicionales_mascotas', 'Adicionales mascotas', '#7c3aed']]
+const series = [['empresariales', 'Empresariales', '#0f766e'], ['independientes', 'Independientes', '#2563eb'], ['sin_clasificar', 'Sin clasificar', '#64748b']]
 const dimensions = { sede: 'Sede', subuen: 'SubUEN', municipio: 'Municipio' }
 
 export default function RetirosTerritories({ rows, from, to }) {

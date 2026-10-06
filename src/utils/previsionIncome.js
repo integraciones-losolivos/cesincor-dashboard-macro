@@ -1,5 +1,15 @@
 const text = (value) => String(value || '').trim()
 const upper = (value) => text(value).toUpperCase()
+const conventionId = (row) => text(row.convenioId ?? row.numeroConvenio)
+const conventionLabel = (row) => text(row.convenio) || (conventionId(row) ? `${conventionId(row)} - ${text(row.nombreConvenioMostrar) || `CONVENIO ${conventionId(row)}`}` : 'SIN CONVENIO')
+
+function preferredConventionLabel(current, candidate) {
+  if (!current) return candidate
+  if (!candidate) return current
+  return candidate.length > current.length || (candidate.length === current.length && candidate.localeCompare(current, 'es') < 0)
+    ? candidate
+    : current
+}
 
 export const incomeInitialFilters = {
   search: '',
@@ -16,10 +26,17 @@ export const incomeInitialFilters = {
 
 export function incomeOptions(rows) {
   const options = (key) => [...new Set(rows.map((row) => text(row[key])).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'))
+  const conventions = new Map()
+  rows.forEach((row) => {
+    const value = conventionId(row)
+    if (!value) return
+    conventions.set(value, preferredConventionLabel(conventions.get(value), conventionLabel(row)))
+  })
   return {
     sedes: options('sede'),
     planes: options('plan'),
-    convenios: options('convenio'),
+    convenios: [...conventions].map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'es', { numeric: true })),
     asesores: options('asesor'),
     tiposAfiliado: options('categoriaProtegido'),
     parentescos: options('parentesco'),
@@ -31,11 +48,11 @@ export function filterIncomeRows(rows, filters) {
   const search = upper(filters.search)
   const matches = (value, selected) => selected === 'TODOS' || text(value) === selected
   const dimensionRows = rows.filter((row) => {
-    if (search && ![row.contrato, row.plan, row.convenio, row.sede, row.asesor, row.parentesco]
+    if (search && ![row.contrato, row.plan, row.convenioId, row.convenio, row.nombreConvenio, row.nombreEmpresa, row.sede, row.asesor, row.parentesco]
       .some((value) => upper(value).includes(search))) return false
     return matches(row.sede, filters.sede)
       && matches(row.plan, filters.plan)
-      && matches(row.convenio, filters.convenio)
+      && matches(conventionId(row), filters.convenio)
       && matches(row.asesor, filters.asesor)
       && matches(row.estado, filters.estado)
   })
@@ -99,7 +116,7 @@ export function buildCommercialPortfolio(rows) {
     return {
       name,
       ...summary,
-      convenios: new Set(groupRows.map((row) => row.convenio).filter(Boolean)).size,
+      convenios: new Set(groupRows.map(conventionId).filter(Boolean)).size,
       planes: new Set(groupRows.map((row) => row.plan).filter(Boolean)).size,
       sedes: new Set(groupRows.map((row) => row.sede).filter(Boolean)).size,
       participacion: totalProtected ? (summary.vidas / totalProtected) * 100 : 0,
@@ -112,7 +129,7 @@ export function buildCommercialKpis(rows) {
   const portfolio = buildCommercialPortfolio(rows)
   return {
     responsables: portfolio.filter((item) => item.contratos > 0).length,
-    convenios: new Set(rows.map((row) => row.convenio).filter(Boolean)).size,
+    convenios: new Set(rows.map(conventionId).filter(Boolean)).size,
     planes: new Set(rows.map((row) => row.plan).filter(Boolean)).size,
     sedes: new Set(rows.map((row) => row.sede).filter(Boolean)).size,
     ...buildIncomeSummary(rows),
@@ -122,12 +139,14 @@ export function buildCommercialKpis(rows) {
 export function buildDimensionPortfolio(rows, key, limit = 10) {
   const groups = new Map()
   rows.forEach((row) => {
-    const name = text(row[key]) || 'SIN DEFINIR'
-    if (!groups.has(name)) groups.set(name, [])
-    groups.get(name).push(row)
+    const id = key === 'convenio' ? conventionId(row) || 'SIN CONVENIO' : text(row[key]) || 'SIN DEFINIR'
+    if (!groups.has(id)) groups.set(id, { name: key === 'convenio' ? conventionLabel(row) : id, rows: [] })
+    const group = groups.get(id)
+    if (key === 'convenio') group.name = preferredConventionLabel(group.name, conventionLabel(row))
+    group.rows.push(row)
   })
   return [...groups.entries()]
-    .map(([name, groupRows]) => ({ name, ...buildIncomeSummary(groupRows) }))
+    .map(([id, group]) => ({ id, name: group.name, ...buildIncomeSummary(group.rows) }))
     .sort((a, b) => b.contratos - a.contratos || b.vidas - a.vidas)
     .slice(0, limit)
 }
@@ -185,11 +204,11 @@ export function filterIncomeProfileRows(rows, filters) {
   const search = upper(filters.search)
   const matches = (value, selected) => selected === 'TODOS' || text(value) === selected
   return rows.filter((row) => {
-    if (search && ![row.contrato, row.plan, row.convenio, row.sede, row.asesor, row.parentesco]
+    if (search && ![row.contrato, row.plan, row.convenioId, row.convenio, row.nombreConvenio, row.nombreEmpresa, row.sede, row.asesor, row.parentesco]
       .some((value) => upper(value).includes(search))) return false
     return matches(row.sede, filters.sede)
       && matches(row.plan, filters.plan)
-      && matches(row.convenio, filters.convenio)
+      && matches(conventionId(row), filters.convenio)
       && matches(row.asesor, filters.asesor)
       && matches(row.categoriaProtegido, filters.tipoAfiliado)
       && matches(row.parentesco, filters.parentesco)
@@ -245,19 +264,22 @@ export function buildConventionPortfolio(rows) {
   const totalProtected = new Set(rows.map((row) => row.id)).size
   const groups = new Map()
   rows.forEach((row) => {
-    const name = text(row.convenio) || 'SIN CONVENIO'
-    if (!groups.has(name)) groups.set(name, [])
-    groups.get(name).push(row)
+    const id = conventionId(row) || 'SIN CONVENIO'
+    if (!groups.has(id)) groups.set(id, { name: conventionLabel(row), rows: [] })
+    const group = groups.get(id)
+    group.name = preferredConventionLabel(group.name, conventionLabel(row))
+    group.rows.push(row)
   })
 
   return [...groups.entries()]
-    .map(([name, groupRows]) => {
-      const summary = buildIncomeSummary(groupRows)
+    .map(([id, group]) => {
+      const summary = buildIncomeSummary(group.rows)
       return {
-        name,
+        id,
+        name: group.name,
         ...summary,
         participacion: totalProtected ? (summary.vidas / totalProtected) * 100 : 0,
-        rows: groupRows,
+        rows: group.rows,
       }
     })
     .sort((a, b) => b.vidas - a.vidas || a.name.localeCompare(b.name, 'es'))

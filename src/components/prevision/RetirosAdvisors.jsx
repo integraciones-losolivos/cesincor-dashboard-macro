@@ -4,13 +4,13 @@ import { ClipboardX, PawPrint, Search, Sigma, UserMinus, UsersRound } from 'luci
 import ChartCard from '../ChartCard.jsx'
 import CustomTooltip from '../CustomTooltip.jsx'
 import KpiCard from '../KpiCard.jsx'
-import { DataIllustration, RankingList } from './ExecutiveViz.jsx'
+import { RankingList } from './ExecutiveViz.jsx'
 import { monthLabel, normalizeText, number, percent } from '../../utils/dashboard.js'
 import { buildAdvisorSummary, buildCausalSummary, buildChannelDimension, buildRetirosKpis, buildRetirosMonthly, groupRetirosCounted } from '../../utils/retiros.js'
 
 const series = [
   ['empresariales', 'Empresariales', '#0f766e'], ['independientes', 'Independientes', '#2563eb'],
-  ['adicionales_personas', 'Adicionales personas', '#ea580c'], ['adicionales_mascotas', 'Adicionales mascotas', '#7c3aed'],
+  ['sin_clasificar', 'Sin clasificar', '#64748b'],
 ]
 
 export default function RetirosAdvisors({ rows, from, to, onOpenDetail }) {
@@ -35,7 +35,7 @@ export default function RetirosAdvisors({ rows, from, to, onOpenDetail }) {
 
   return <div className="space-y-6">
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-      <KpiCard title="Asesores con retiros" value={number(summary.length)} helper={`${number(unnamed)} retiros sin asesor identificado.`} icon={<UsersRound className="size-6" />} illustration={<DataIllustration type="advisor" className="w-full" />} accent="blue" />
+      <KpiCard title="Asesores con retiros" value={number(summary.length)} helper={`${number(unnamed)} retiros sin asesor identificado.`} icon={<UsersRound className="size-6" />} accent="blue" />
       <KpiCard title="Total de retiros" value={number(kpis.total)} helper={leader ? `Mayor volumen: ${leader.name}.` : 'Sin retiros.'} icon={<Sigma className="size-6" />} accent="rose" />
       <KpiCard title="Contratos retirados" value={number(kpis.contratos)} helper={topContracts ? `Mayor cantidad: ${topContracts.name}.` : 'Sin contratos.'} icon={<ClipboardX className="size-6" />} accent="emerald" />
       <KpiCard title="Adicionales personas" value={number(kpis.adicionales)} helper="Registros A y M." icon={<UserMinus className="size-6" />} accent="orange" />

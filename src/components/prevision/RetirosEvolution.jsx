@@ -10,8 +10,7 @@ import { buildRetirosKpis, buildRetirosTimeline, timelineKey } from '../../utils
 const channels = [
   ['empresariales', 'Empresariales', '#0f766e'],
   ['independientes', 'Independientes', '#2563eb'],
-  ['adicionales', 'Adicionales personas', '#ea580c'],
-  ['mascotas', 'Adicionales mascotas', '#7c3aed'],
+  ['sinClasificar', 'Sin clasificar', '#64748b'],
 ]
 
 function signed(value) { return value === null || value === undefined ? '—' : `${value > 0 ? '+' : ''}${number(value)}` }

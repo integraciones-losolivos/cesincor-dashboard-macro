@@ -9,7 +9,7 @@ import { monthLabel, normalizeText, number, percent } from '../../utils/dashboar
 import { buildCausalMonthly, buildCausalSummary, buildRetirosKpis } from '../../utils/retiros.js'
 
 const NO_CAUSE = 'SIN CAUSAL IDENTIFICADA'
-const causeChannels = ['EMPRESARIALES', 'INDEPENDIENTES', 'ADICIONALES PERSONAS', 'ADICIONALES MASCOTAS']
+const causeChannels = ['EMPRESARIALES', 'INDEPENDIENTES', 'SIN CLASIFICAR']
 
 export default function RetirosCauses({ rows, onOpenDetail }) {
   const [selectedCause, setSelectedCause] = useState('')

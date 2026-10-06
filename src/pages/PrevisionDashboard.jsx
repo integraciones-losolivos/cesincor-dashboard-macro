@@ -324,6 +324,7 @@ export default function PrevisionDashboard({ areaName = 'Prevision' }) {
     <main className="prevision-bi min-h-screen bg-[radial-gradient(circle_at_top_left,#cffafe_0,#f8fafc_32%,#f8fafc_100%)]">
       <section className="relative overflow-hidden border-b border-cyan-900/20 bg-gradient-to-br from-slate-950 via-cyan-950 to-teal-800 px-4 py-10 text-white sm:px-6 lg:px-8">
         <div className="absolute right-[-5rem] top-[-6rem] h-72 w-72 rounded-full bg-cyan-300/15 blur-3xl" />
+        <img src="/prevision-comunidad-protegida.png" alt="Comunidad protegida" className="pointer-events-none absolute bottom-[-2.2rem] right-[7%] hidden h-[15rem] w-auto select-none object-contain opacity-70 lg:block" />
         <div className="relative mx-auto flex max-w-7xl flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex items-center gap-4">
             <div className="grid size-14 shrink-0 place-items-center rounded-[1.4rem] border border-white/15 bg-white/10 text-white shadow-lg">

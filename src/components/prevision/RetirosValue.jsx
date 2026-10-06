@@ -8,7 +8,7 @@ import { money, monthLabel, normalizeText, number, percent, shortMoney } from '.
 import { buildRetirosValueKpis, buildValueMonthly, buildValueSummary } from '../../utils/retiros.js'
 
 const dimensions = { canal: 'Canal', plan: 'Plan', asesor: 'Asesor', sede: 'Sede', subuen: 'SubUEN', municipio: 'Municipio', entidad: 'Entidad / convenio', causal_retiro: 'Causal' }
-const colors = [['empresariales', 'Empresariales', '#0f766e'], ['independientes', 'Independientes', '#2563eb'], ['adicionales_personas', 'Adicionales personas', '#ea580c'], ['adicionales_mascotas', 'Adicionales mascotas', '#7c3aed']]
+const colors = [['empresariales', 'Empresariales', '#0f766e'], ['independientes', 'Independientes', '#2563eb'], ['sin_clasificar', 'Sin clasificar', '#64748b']]
 
 export default function RetirosValue({ rows }) {
   const [dimension, setDimension] = useState('plan')

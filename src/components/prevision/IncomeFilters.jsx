@@ -4,7 +4,7 @@ import SelectField from '../SelectField.jsx'
 import { number } from '../../utils/dashboard.js'
 
 const contextual = {
-  general: ['plan', 'convenio', 'tipoAfiliado'], comercial: ['asesor', 'convenio', 'plan'], asesores: ['asesor', 'convenio', 'plan'],
+  general: ['search', 'plan', 'convenio', 'tipoAfiliado'], comercial: ['asesor', 'convenio', 'plan'], asesores: ['asesor', 'convenio', 'plan'],
   composicion: ['tipoAfiliado', 'parentesco', 'estado'], sedes: ['asesor', 'plan', 'convenio'], planes: ['plan', 'asesor', 'convenio'],
   convenios: ['convenio', 'asesor', 'plan'], parentescos: ['parentesco', 'tipoAfiliado', 'estado'],
 }
@@ -31,7 +31,7 @@ export default function IncomeFilters({ sectionView = 'general', filters, setFil
         <button type="button" onClick={onRefresh} disabled={loading} className="inline-flex h-10 items-center gap-2 rounded-xl bg-teal-800 px-3 text-xs font-black text-white disabled:opacity-60"><RefreshCw className={`size-4 ${loading ? 'animate-spin' : ''}`} />Actualizar</button>
       </div>
       {expanded && <div className="mt-3 grid gap-3 border-t border-slate-100 pt-3 md:grid-cols-2 xl:grid-cols-4">
-        <label className="space-y-1"><Label>Buscar</Label><div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><input value={filters.search} onChange={(event) => update('search', event.target.value)} placeholder="Contrato, convenio, asesor…" className="h-10 w-full rounded-xl border border-slate-200 pl-9 pr-3 text-xs font-bold outline-none focus:border-teal-600" /></div></label>
+        {keys.includes('search') && <label className="space-y-1"><Label>Buscar</Label><div className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" /><input value={filters.search} onChange={(event) => update('search', event.target.value)} placeholder="Contrato, convenio, asesor…" className="h-10 w-full rounded-xl border border-slate-200 pl-9 pr-3 text-xs font-bold outline-none focus:border-teal-600" /></div></label>}
         {keys.includes('plan') && <SelectField label="Plan" value={filters.plan} onChange={(value) => update('plan', value)} options={options.planes} />}
         {keys.includes('convenio') && <SelectField label="Convenio" value={filters.convenio} onChange={(value) => update('convenio', value)} options={options.convenios} />}
         {keys.includes('asesor') && <SelectField label="Responsable / asesor" value={filters.asesor} onChange={(value) => update('asesor', value)} options={options.asesores} />}
@@ -39,7 +39,7 @@ export default function IncomeFilters({ sectionView = 'general', filters, setFil
         {keys.includes('parentesco') && <SelectField label="Parentesco" value={filters.parentesco} onChange={(value) => update('parentesco', value)} options={options.parentescos} />}
         {keys.includes('estado') && <SelectField label="Estado" value={filters.estado} onChange={(value) => update('estado', value)} options={options.estados} />}
       </div>}
-      <p className="mt-2 text-[11px] font-semibold text-slate-400">Fecha y sede se conservan; los filtros específicos cambian según el análisis.</p>
+      <p className="mt-2 text-[11px] font-semibold text-slate-400">Fecha y sede se conservan entre vistas; los demás filtros pertenecen al análisis seleccionado.</p>
     </section>
   )
 }

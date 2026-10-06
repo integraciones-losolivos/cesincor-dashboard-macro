@@ -1,7 +1,7 @@
 import { normalizeText } from './dashboard.js'
 
 export const RETIRO_TODOS = 'TODOS'
-export const RETIRO_CHANNELS = ['EMPRESARIALES', 'INDEPENDIENTES', 'ADICIONALES PERSONAS', 'ADICIONALES MASCOTAS']
+export const RETIRO_CHANNELS = ['EMPRESARIALES', 'INDEPENDIENTES', 'SIN CLASIFICAR']
 
 export const initialRetirosFilters = {
   search: '',
@@ -19,11 +19,41 @@ export const initialRetirosFilters = {
   estadoContrato: RETIRO_TODOS,
 }
 
+function utcDate(value) {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/)
+  return match ? new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))) : null
+}
+
+function addClamped(date, years, months) {
+  const targetMonth = date.getUTCMonth() + months + years * 12
+  const first = new Date(Date.UTC(date.getUTCFullYear(), targetMonth, 1))
+  const lastDay = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0)).getUTCDate()
+  return new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), Math.min(date.getUTCDate(), lastDay)))
+}
+
+export function formatVigencia(row) {
+  const start = utcDate(row?.fecha_ingreso)
+  const end = utcDate(row?.fecha_retiro || row?.fecha)
+  if (!start || !end || end < start) return 'Sin cálculo'
+  let years = end.getUTCFullYear() - start.getUTCFullYear()
+  if (addClamped(start, years, 0) > end) years -= 1
+  const afterYears = addClamped(start, years, 0)
+  let months = (end.getUTCFullYear() - afterYears.getUTCFullYear()) * 12 + end.getUTCMonth() - afterYears.getUTCMonth()
+  if (addClamped(afterYears, 0, months) > end) months -= 1
+  const afterMonths = addClamped(afterYears, 0, months)
+  const days = Math.floor((end - afterMonths) / 86400000)
+  const parts = []
+  if (years) parts.push(`${years} ${years === 1 ? 'año' : 'años'}`)
+  if (months) parts.push(`${months} ${months === 1 ? 'mes' : 'meses'}`)
+  if (days || !parts.length) parts.push(`${days} ${days === 1 ? 'día' : 'días'}`)
+  return parts.join(', ')
+}
+
 export function filterRetiros(rows, filters) {
   const search = normalizeText(filters.search)
   return rows.filter((row) => (
-    (!filters.fechaInicial || row.fecha >= filters.fechaInicial) &&
-    (!filters.fechaFinal || row.fecha <= filters.fechaFinal) &&
+    (!filters.fechaInicial || String(row.fecha_retiro || row.fecha || '').slice(0, 10) >= filters.fechaInicial) &&
+    (!filters.fechaFinal || String(row.fecha_retiro || row.fecha || '').slice(0, 10) <= filters.fechaFinal) &&
     (!search || [row.contrato, row.documento, row.nombre, row.numero_convenio, row.entidad, row.nombre_entidad, row.plan, row.asesor]
       .map(normalizeText).some((value) => value.includes(search))) &&
     (filters.canal === RETIRO_TODOS || row.canal === filters.canal) &&
@@ -53,8 +83,7 @@ export function buildTerritorySummary(rows, key = 'sede') {
     const channels = buildChannelSummary(entries)
     return {
       name, total: kpis.total, contratos: kpis.contratos, adicionales: kpis.adicionales, mascotas: kpis.mascotas,
-      empresariales: channels[0].cantidad, independientes: channels[1].cantidad,
-      adicionales_personas: channels[2].cantidad, adicionales_mascotas: channels[3].cantidad,
+      empresariales: channels[0].cantidad, independientes: channels[1].cantidad, sin_clasificar: channels[2].cantidad,
       porcentaje: total ? kpis.total / total : 0,
       principalCausal: buildCausalSummary(entries)[0]?.name || 'SIN CAUSAL IDENTIFICADA',
     }
@@ -91,7 +120,7 @@ export function buildValueMonthly(rows) {
   const grouped = new Map()
   rows.filter((row) => row.aplica_valor && row.fecha).forEach((row) => {
     const key = row.fecha.slice(0, 7)
-    const current = grouped.get(key) || { key, valor: 0, empresariales: 0, independientes: 0, adicionales_personas: 0, adicionales_mascotas: 0 }
+    const current = grouped.get(key) || { key, valor: 0, empresariales: 0, independientes: 0, sin_clasificar: 0 }
     const value = Number(row.valor_asociado || 0)
     current.valor += value
     const channelKey = String(row.canal || '').toLowerCase().replaceAll(' ', '_')
@@ -319,18 +348,19 @@ function monthKeys(from, to, rows) {
 
 export function buildRetirosMonthly(rows, { from = '', to = '' } = {}) {
   const grouped = new Map(monthKeys(from, to, rows).map((key) => [key, {
-    key, contratosSet: new Set(), adicionales: 0, mascotas: 0, empresarialesSet: new Set(), independientesSet: new Set(),
+    key, contratosSet: new Set(), adicionales: 0, mascotas: 0, empresarialesRows: [], independientesRows: [], sinClasificarRows: [],
     adicionalMayor: 0, adicionalMenor: 0, mascota: 0, mascotaAdicional: 0,
   }]))
   rows.forEach((row) => {
     const key = row.fecha?.slice(0, 7)
     if (!key) return
-    const current = grouped.get(key) || { key, contratosSet: new Set(), adicionales: 0, mascotas: 0, empresarialesSet: new Set(), independientesSet: new Set(), adicionalMayor: 0, adicionalMenor: 0, mascota: 0, mascotaAdicional: 0 }
+    const current = grouped.get(key) || { key, contratosSet: new Set(), adicionales: 0, mascotas: 0, empresarialesRows: [], independientesRows: [], sinClasificarRows: [], adicionalMayor: 0, adicionalMenor: 0, mascota: 0, mascotaAdicional: 0 }
     if (row.tipo_registro === 'CONTRATO') current.contratosSet.add(row.contrato)
     if (row.tipo_registro === 'ADICIONAL') current.adicionales += 1
     if (row.tipo_registro === 'MASCOTA') current.mascotas += 1
-    if (row.canal === 'EMPRESARIALES') current.empresarialesSet.add(row.contrato)
-    if (row.canal === 'INDEPENDIENTES') current.independientesSet.add(row.contrato)
+    if (row.canal === 'EMPRESARIALES') current.empresarialesRows.push(row)
+    if (row.canal === 'INDEPENDIENTES') current.independientesRows.push(row)
+    if (row.canal === 'SIN CLASIFICAR') current.sinClasificarRows.push(row)
     if (row.codigo_tipo === 'A') current.adicionalMayor += 1
     if (row.codigo_tipo === 'M') current.adicionalMenor += 1
     if (row.codigo_tipo === 'P') current.mascota += 1
@@ -340,13 +370,14 @@ export function buildRetirosMonthly(rows, { from = '', to = '' } = {}) {
   let previous = null
   return [...grouped.values()].sort((a, b) => a.key.localeCompare(b.key)).map((item) => {
     const contratos = item.contratosSet.size
-    const empresariales = item.empresarialesSet.size
-    const independientes = item.independientesSet.size
+    const empresariales = buildRetirosKpis(item.empresarialesRows).total
+    const independientes = buildRetirosKpis(item.independientesRows).total
+    const sinClasificar = buildRetirosKpis(item.sinClasificarRows).total
     const total = contratos + item.adicionales + item.mascotas
     const variacion = previous === null ? null : total - previous
     const variacionPorcentual = previous ? variacion / previous : null
     previous = total
-    return { ...item, contratos, empresariales, independientes, total, variacion, variacionPorcentual }
+    return { ...item, contratos, empresariales, independientes, sinClasificar, total, variacion, variacionPorcentual }
   })
 }
 
@@ -359,16 +390,32 @@ export function timelineKey(dateValue, granularity = 'monthly') {
   return date.toISOString().slice(0, 10)
 }
 
+function timelineKeys(rows, granularity, { from = '', to = '' } = {}) {
+  const rowDates = rows.map((row) => String(row.fecha || '').slice(0, 10)).filter(Boolean).sort()
+  const first = from || rowDates[0]
+  const last = to || rowDates.at(-1)
+  if (!first || !last || first > last) return []
+  const cursor = new Date(`${first}T12:00:00`)
+  const end = new Date(`${last}T12:00:00`)
+  const keys = new Set()
+  while (cursor <= end) {
+    keys.add(timelineKey(cursor.toISOString().slice(0, 10), granularity))
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return [...keys]
+}
+
 export function buildRetirosTimeline(rows, granularity = 'monthly', range = {}) {
   if (granularity === 'monthly') return buildRetirosMonthly(rows, range)
-  const grouped = new Map()
+  const grouped = new Map(timelineKeys(rows, granularity, range).map((key) => [key, []]))
   rows.forEach((row) => { const key = timelineKey(row.fecha, granularity); if (!key) return; const current = grouped.get(key) || []; current.push(row); grouped.set(key, current) })
   let previous = null
   return [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([key, entries]) => {
     const kpis = buildRetirosKpis(entries)
-    const empresariales = new Set(entries.filter((row) => row.canal === 'EMPRESARIALES').map((row) => row.contrato)).size
-    const independientes = new Set(entries.filter((row) => row.canal === 'INDEPENDIENTES').map((row) => row.contrato)).size
-    const item = { key, total: kpis.total, contratos: kpis.contratos, adicionales: kpis.adicionales, mascotas: kpis.mascotas, empresariales, independientes,
+    const empresariales = buildRetirosKpis(entries.filter((row) => row.canal === 'EMPRESARIALES')).total
+    const independientes = buildRetirosKpis(entries.filter((row) => row.canal === 'INDEPENDIENTES')).total
+    const sinClasificar = buildRetirosKpis(entries.filter((row) => row.canal === 'SIN CLASIFICAR')).total
+    const item = { key, total: kpis.total, contratos: kpis.contratos, adicionales: kpis.adicionales, mascotas: kpis.mascotas, empresariales, independientes, sinClasificar,
       adicionalMayor: entries.filter((row) => row.codigo_tipo === 'A').length, adicionalMenor: entries.filter((row) => row.codigo_tipo === 'M').length,
       mascota: entries.filter((row) => row.codigo_tipo === 'P').length, mascotaAdicional: entries.filter((row) => row.codigo_tipo === 'D').length }
     item.variacion = previous === null ? null : item.total - previous
@@ -385,19 +432,19 @@ export function buildCausalSummary(rows) {
     const causal = row.causal_retiro || 'SIN CAUSAL IDENTIFICADA'
     const current = grouped.get(causal) || {
       name: causal, contratosSet: new Set(), adicionales: 0, mascotas: 0,
-      empresarialesSet: new Set(), independientesSet: new Set(),
+      empresarialesRows: [], independientesRows: [],
     }
     if (row.tipo_registro === 'CONTRATO') current.contratosSet.add(row.contrato)
     if (row.tipo_registro === 'ADICIONAL') current.adicionales += 1
     if (row.tipo_registro === 'MASCOTA') current.mascotas += 1
-    if (row.canal === 'EMPRESARIALES') current.empresarialesSet.add(row.contrato)
-    if (row.canal === 'INDEPENDIENTES') current.independientesSet.add(row.contrato)
+    if (row.canal === 'EMPRESARIALES') current.empresarialesRows.push(row)
+    if (row.canal === 'INDEPENDIENTES') current.independientesRows.push(row)
     grouped.set(causal, current)
   })
   return [...grouped.values()].map((item) => {
     const contratos = item.contratosSet.size
-    const empresariales = item.empresarialesSet.size
-    const independientes = item.independientesSet.size
+    const empresariales = buildRetirosKpis(item.empresarialesRows).total
+    const independientes = buildRetirosKpis(item.independientesRows).total
     const cantidad = contratos + item.adicionales + item.mascotas
     return { name: item.name, cantidad, porcentaje: total ? cantidad / total : 0, contratos, adicionales: item.adicionales, mascotas: item.mascotas, empresariales, independientes }
   }).sort((a, b) => b.cantidad - a.cantidad || a.name.localeCompare(b.name))
@@ -410,11 +457,7 @@ export function buildCausalMonthly(rows, causal) {
 }
 
 function channelCount(rows, channel) {
-  const selected = rows.filter((row) => row.canal === channel)
-  if (channel === 'EMPRESARIALES' || channel === 'INDEPENDIENTES') {
-    return new Set(selected.map((row) => row.contrato)).size
-  }
-  return selected.length
+  return buildRetirosKpis(rows.filter((row) => row.canal === channel)).total
 }
 
 function topNames(rows, key, limit = 3) {
@@ -438,9 +481,9 @@ export function buildChannelSummary(rows) {
       name,
       cantidad,
       porcentaje: total ? cantidad / total : 0,
-      contratos: name === 'EMPRESARIALES' || name === 'INDEPENDIENTES' ? cantidad : 0,
-      adicionales: name === 'ADICIONALES PERSONAS' ? cantidad : 0,
-      mascotas: name === 'ADICIONALES MASCOTAS' ? cantidad : 0,
+      contratos: buildRetirosKpis(channelRows).contratos,
+      adicionales: buildRetirosKpis(channelRows).adicionales,
+      mascotas: buildRetirosKpis(channelRows).mascotas,
       planes: topNames(channelRows, 'plan'),
       sedes: topNames(channelRows, 'sede'),
     }

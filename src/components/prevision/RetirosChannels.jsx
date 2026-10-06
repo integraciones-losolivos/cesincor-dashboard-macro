@@ -11,8 +11,7 @@ import { buildCausalSummary, buildChannelDimension, buildChannelSummary, buildRe
 const channelConfig = [
   { name: 'EMPRESARIALES', monthly: 'empresariales', dataKey: 'empresariales', label: 'Empresariales', color: '#0f766e' },
   { name: 'INDEPENDIENTES', monthly: 'independientes', dataKey: 'independientes', label: 'Independientes', color: '#2563eb' },
-  { name: 'ADICIONALES PERSONAS', monthly: 'adicionales', dataKey: 'adicionales_personas', label: 'Adicionales personas', color: '#ea580c' },
-  { name: 'ADICIONALES MASCOTAS', monthly: 'mascotas', dataKey: 'adicionales_mascotas', label: 'Adicionales mascotas', color: '#7c3aed' },
+  { name: 'SIN CLASIFICAR', monthly: 'sinClasificar', dataKey: 'sin_clasificar', label: 'Sin clasificar', color: '#64748b' },
 ]
 
 export default function RetirosChannels({ rows, from, to, onOpenDetail }) {
@@ -29,7 +28,7 @@ export default function RetirosChannels({ rows, from, to, onOpenDetail }) {
   const byPlan = useMemo(() => buildChannelDimension(channelRows, 'plan', { limit: 8 }), [channelRows])
   const byAdvisor = useMemo(() => buildChannelDimension(channelRows, 'asesor', { limit: 8 }), [channelRows])
   const causes = useMemo(() => buildCausalSummary(channelRows).slice(0, 6), [channelRows])
-  const internalKey = activeChannel === 'ADICIONALES PERSONAS' || activeChannel === 'ADICIONALES MASCOTAS' ? 'tipo_retiro' : dimension
+  const internalKey = dimension
   const internal = useMemo(() => groupRetiros(channelRows, internalKey, { limit: 8 }), [channelRows, internalKey])
   const toggle = (channel) => setVisibleChannels((current) => { const next = new Set(current); if (next.has(channel)) next.delete(channel); else next.add(channel); return next })
 
@@ -37,9 +36,9 @@ export default function RetirosChannels({ rows, from, to, onOpenDetail }) {
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
       <KpiCard title="Retiros empresariales" value={number(summary[0]?.cantidad)} helper={`${percent(summary[0]?.porcentaje)} del total.`} icon={<Building2 className="size-6" />} accent="emerald" />
       <KpiCard title="Retiros independientes" value={number(summary[1]?.cantidad)} helper={`${percent(summary[1]?.porcentaje)} del total.`} icon={<UsersRound className="size-6" />} accent="blue" />
-      <KpiCard title="Adicionales personas" value={number(summary[2]?.cantidad)} helper={`${percent(summary[2]?.porcentaje)} del total.`} icon={<UserMinus className="size-6" />} accent="orange" />
-      <KpiCard title="Adicionales mascotas" value={number(summary[3]?.cantidad)} helper={`${percent(summary[3]?.porcentaje)} del total.`} icon={<PawPrint className="size-6" />} accent="violet" />
-      <KpiCard title="Total general" value={number(total)} helper={leader ? `Mayor participación: ${leader.name}.` : 'Sin retiros.'} icon={<Sigma className="size-6" />} accent="rose" />
+      <KpiCard title="Sin canal clasificado" value={number(summary[2]?.cantidad)} helper="Convenios sin UEN1/UEN2." icon={<Sigma className="size-6" />} accent="slate" />
+      <KpiCard title="Adicionales personas" value={number(buildRetirosKpis(rows).adicionales)} helper="Tipo de retiro, no canal." icon={<UserMinus className="size-6" />} accent="orange" />
+      <KpiCard title="Adicionales mascotas" value={number(buildRetirosKpis(rows).mascotas)} helper="Tipo de retiro, no canal." icon={<PawPrint className="size-6" />} accent="violet" />
     </div>
 
     <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
