@@ -5,7 +5,8 @@ const memoryCache = new Map()
 const DB_NAME = 'crystal-dashboard-cache'
 const STORE_NAME = 'prevision-income'
 
-function cacheKey(from, to) { return `v2:${from || 'all'}:${to || 'all'}` }
+// v5 invalida respuestas persistidas que todavía identificaban convenios por nombre.
+function cacheKey(from, to, convenio) { return `v5-convention-id:${from || 'all'}:${to || 'all'}:${convenio || 'all'}` }
 
 function openCache() {
   if (typeof indexedDB === 'undefined') return Promise.resolve(null)
@@ -56,8 +57,8 @@ async function writePersistentCache(key, value) {
   db.close()
 }
 
-export async function fetchPrevisionIncomeRows({ from = '', to = '', refresh = false } = {}) {
-  const key = cacheKey(from, to)
+export async function fetchPrevisionIncomeRows({ from = '', to = '', convenio = '', refresh = false } = {}) {
+  const key = cacheKey(from, to, convenio)
   let staleCache = memoryCache.get(key) || await readPersistentCache(key)
   if (!refresh) {
     if (staleCache && Date.now() - staleCache.createdAt < CACHE_MAX_AGE_MS) {
@@ -69,6 +70,7 @@ export async function fetchPrevisionIncomeRows({ from = '', to = '', refresh = f
   const search = new URLSearchParams()
   if (from) search.set('from', from)
   if (to) search.set('to', to)
+  if (convenio && convenio !== 'TODOS') search.set('convenio', convenio)
   if (refresh) search.set('refresh', 'true')
 
   let response

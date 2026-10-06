@@ -4,6 +4,7 @@ import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
 import ChartCard from '../ChartCard.jsx'
 import CustomTooltip from '../CustomTooltip.jsx'
 import KpiCard from '../KpiCard.jsx'
+import { RankingList } from './ExecutiveViz.jsx'
 import { money, number } from '../../utils/dashboard.js'
 import { buildCommercialKpis, buildCommercialPortfolio, buildDimensionPortfolio, buildIncomeComposition, buildIncomeSummary } from '../../utils/previsionIncome.js'
 
@@ -38,7 +39,7 @@ export default function CommercialPortfolio({ rows }) {
     </div>
 
     <ChartCard title="Ranking de responsables" subtitle="Portafolio activo actual; no representa ventas nuevas ni producción histórica." accent="emerald" right={<select value={sortBy} onChange={(event) => setSortBy(event.target.value)} className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700"><option value="contratos">Por contratos</option><option value="vidas">Por personas</option><option value="facturacion">Por facturación</option></select>}>
-      <div className="h-80"><ResponsiveContainer width="100%" height="100%"><BarChart data={sorted.slice(0, 10)} layout="vertical" margin={{ left: 20, right: 20 }}><CartesianGrid strokeDasharray="3 3" horizontal={false} /><XAxis type="number" tickFormatter={sortBy === 'facturacion' ? compactMoney : number} /><YAxis dataKey="name" type="category" width={135} tick={{ fontSize: 11 }} /><Tooltip content={<CustomTooltip />} /><Bar dataKey={sortBy} name={sortLabels[sortBy]} fill="#0f766e" radius={[0, 8, 8, 0]} onClick={(entry) => setSelectedName(entry.name)} className="cursor-pointer" /></BarChart></ResponsiveContainer></div>
+      <RankingList data={sorted.slice(0, 10)} valueKey={sortBy} formatter={sortBy === 'facturacion' ? compactMoney : number} selected={selected?.name} onSelect={(item) => setSelectedName(item.name)} color="#0f766e" />
     </ChartCard>
 
     <ChartCard title="Tabla de responsables" subtitle="Busca, ordena y selecciona un responsable para consultar su detalle." accent="slate">
@@ -61,6 +62,6 @@ function ResponsibleDetail({ responsible }) {
 }
 
 function DarkChart({ title, children }) { return <div className="rounded-2xl bg-white p-4 text-slate-900"><h3 className="font-black">{title}</h3>{children}</div> }
-function HorizontalBars({ data, dataKey, name, color = '#0f766e' }) { return <div className="mt-3 h-64"><ResponsiveContainer width="100%" height="100%"><BarChart data={data} layout="vertical" margin={{ left: 12, right: 16 }}><CartesianGrid strokeDasharray="3 3" horizontal={false} /><XAxis type="number" tickFormatter={number} /><YAxis dataKey="name" type="category" width={115} tick={{ fontSize: 10 }} /><Tooltip content={<CustomTooltip />} /><Bar dataKey={dataKey} name={name} fill={color} radius={[0, 7, 7, 0]} /></BarChart></ResponsiveContainer></div> }
+function HorizontalBars({ data, dataKey, color = '#0f766e' }) { return <RankingList data={data} valueKey={dataKey} color={color} /> }
 function decimal(value) { return Number(value || 0).toLocaleString('es-CO', { maximumFractionDigits: 1 }) }
 function compactMoney(value) { return new Intl.NumberFormat('es-CO', { notation: 'compact', maximumFractionDigits: 1 }).format(value || 0) }

@@ -1,25 +1,28 @@
 import {
   BadgeDollarSign,
+  Building2,
+  ChartNoAxesCombined,
   ClipboardCheck,
+  Handshake,
+  LayoutDashboard,
   Layers3,
+  Network,
   RefreshCw,
+  TrendingUp,
+  UserRoundSearch,
   UserRoundCheck,
   UsersRound,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Bar,
-  BarChart,
-  CartesianGrid,
   Cell,
   Pie,
   PieChart,
   ResponsiveContainer,
   Tooltip,
-  XAxis,
-  YAxis,
 } from "recharts";
 import { fetchPrevisionIncomeRows } from "../../services/previsionIncomeApi.js";
+import { fetchPrevisionBillingSummary } from "../../services/previsionApi.js";
 import { money, number } from "../../utils/dashboard.js";
 import {
   buildIncomeComposition,
@@ -38,9 +41,23 @@ import CommercialIncome from "./CommercialIncome.jsx";
 import CommercialPortfolio from "./CommercialPortfolio.jsx";
 import ConventionSummary from "./ConventionSummary.jsx";
 import IncomeFilters from "./IncomeFilters.jsx";
+import PrevisionSubnav from "./PrevisionSubnav.jsx";
+import { RankingList } from "./ExecutiveViz.jsx";
 import PlanSummary from "./PlanSummary.jsx";
 import RelationshipSummary from "./RelationshipSummary.jsx";
 import SiteSummary from "./SiteSummary.jsx";
+
+const incomeViews = [
+  { id: "general", label: "Resumen ejecutivo", icon: LayoutDashboard },
+  { id: "comercial", label: "Producción comercial", icon: TrendingUp },
+  { id: "asesores", label: "Responsables", icon: UserRoundSearch },
+  { id: "composicion", label: "Personas protegidas", icon: Network },
+  { id: "sedes", label: "Por sede", icon: Building2 },
+  { id: "planes", label: "Por plan", icon: Layers3 },
+  { id: "convenios", label: "Por convenio", icon: Handshake },
+  { id: "parentescos", label: "Por parentesco", icon: ChartNoAxesCombined },
+];
+const contextualFilterKeys = ["search", "plan", "convenio", "asesor", "tipoAfiliado", "parentesco", "estado"];
 
 export default function IncomeOverview({ active = true }) {
   const [rows, setRows] = useState([]);
@@ -49,6 +66,10 @@ export default function IncomeOverview({ active = true }) {
   const [error, setError] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [sectionView, setSectionView] = useState("general");
+  const [navCollapsed, setNavCollapsed] = useState(false);
+  const [billingSummary, setBillingSummary] = useState(null);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [billingError, setBillingError] = useState("");
 
   useEffect(() => {
     if (!active) return undefined;
@@ -58,6 +79,7 @@ export default function IncomeOverview({ active = true }) {
     fetchPrevisionIncomeRows({
       from: filters.fechaInicial,
       to: filters.fechaFinal,
+      convenio: filters.convenio,
       refresh: refreshKey > 0,
     })
       .then((data) => {
@@ -68,6 +90,29 @@ export default function IncomeOverview({ active = true }) {
       })
       .finally(() => {
         if (current) setLoading(false);
+      });
+    return () => {
+      current = false;
+    };
+  }, [active, filters.convenio, filters.fechaFinal, filters.fechaInicial, refreshKey]);
+
+  useEffect(() => {
+    if (!active) return undefined;
+    let current = true;
+    setBillingLoading(true);
+    setBillingError("");
+    fetchPrevisionBillingSummary({
+      from: filters.fechaInicial,
+      to: filters.fechaFinal,
+    })
+      .then((data) => {
+        if (current) setBillingSummary(data);
+      })
+      .catch((requestError) => {
+        if (current) setBillingError(requestError.message);
+      })
+      .finally(() => {
+        if (current) setBillingLoading(false);
       });
     return () => {
       current = false;
@@ -115,6 +160,14 @@ export default function IncomeOverview({ active = true }) {
     () => groupIncomeBy(filteredRows, "sede"),
     [filteredRows],
   );
+  const selectIncomeView = (view) => {
+    setSectionView(view);
+    setFilters((current) => ({
+      ...current,
+      ...Object.fromEntries(contextualFilterKeys.map((key) => [key, key === "search" ? "" : key === "estado" ? "ACTIVO" : "TODOS"])),
+      ...(view === "composicion" ? { estado: "TODOS" } : {}),
+    }));
+  };
 
   if (loading && !rows.length) return <IncomeLoading />;
   if (error && !rows.length)
@@ -132,49 +185,28 @@ export default function IncomeOverview({ active = true }) {
           {error} Se conservan los datos cargados.
         </div>
       )}
-      <IncomeFilters
-        filters={filters}
-        setFilters={setFilters}
-        options={options}
-        resultCount={summary.vidas}
-        loading={loading}
-        onRefresh={() => setRefreshKey((key) => key + 1)}
-      />
+      <div className="grid items-start gap-4 lg:grid-cols-[auto_minmax(0,1fr)]">
+        <PrevisionSubnav title="Ingresos" subtitle="Producción y portafolio" items={incomeViews} active={sectionView} onSelect={selectIncomeView} collapsed={navCollapsed} onToggle={() => setNavCollapsed((value) => !value)} />
+        <div className="min-w-0 space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[.18em] text-teal-700">Previsión · Ingresos</p>
+              <h2 className="mt-1 text-2xl font-black text-slate-950">{incomeViews.find((view) => view.id === sectionView)?.label}</h2>
+            </div>
+            <p className="rounded-full bg-teal-50 px-3 py-1.5 text-sm font-black text-teal-700">{number(summary.vidas)} protegidos</p>
+          </div>
+          <IncomeFilters
+            sectionView={sectionView}
+            filters={filters}
+            setFilters={setFilters}
+            options={options}
+            resultCount={summary.vidas}
+            loading={loading || billingLoading}
+            onRefresh={() => setRefreshKey((key) => key + 1)}
+          />
 
-      <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-2">
-        <SectionButton active={sectionView === "general"} onClick={() => setSectionView("general")}>
-          Indicadores generales
-        </SectionButton>
-        <SectionButton active={sectionView === "comercial"} onClick={() => setSectionView("comercial")}>
-          Gestión comercial · Responsables
-        </SectionButton>
-        <SectionButton active={sectionView === "asesores"} onClick={() => setSectionView("asesores")}>
-          Resumen por asesor
-        </SectionButton>
-        <SectionButton
-          active={sectionView === "composicion"}
-          onClick={() => {
-            setSectionView("composicion");
-            setFilters((current) => ({ ...current, estado: "TODOS" }));
-          }}
-        >
-          Composición de afiliados
-        </SectionButton>
-        <SectionButton active={sectionView === "sedes"} onClick={() => setSectionView("sedes")}>
-          Resumen por sede
-        </SectionButton>
-        <SectionButton active={sectionView === "planes"} onClick={() => setSectionView("planes")}>
-          Resumen por planes
-        </SectionButton>
-        <SectionButton active={sectionView === "convenios"} onClick={() => setSectionView("convenios")}>
-          Resumen por convenios
-        </SectionButton>
-        <SectionButton active={sectionView === "parentescos"} onClick={() => setSectionView("parentescos")}>
-          Resumen por parentescos
-        </SectionButton>
-      </div>
-
-      {sectionView === "general" ? <>
+      {sectionView === "general" ? (
+        <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard
               title="Personas protegidas"
@@ -198,11 +230,18 @@ export default function IncomeOverview({ active = true }) {
               accent="violet"
             />
             <KpiCard
-              title="Facturación vigente"
-              value={money(summary.facturacion)}
-              helper="Valor facturado una sola vez por contrato, desde la fila titular."
+              title="Facturación contable del periodo"
+              value={billingLoading ? "Consultando…" : billingError ? "—" : money(billingSummary?.totalFacturado || 0)}
+              helper={billingError || "OJDT/JDT1 por fecha contable; incluye notas crédito, anulaciones, seguro y descuentos."}
               icon={<BadgeDollarSign className="size-6" />}
               accent="orange"
+            />
+            <KpiCard
+              title="Cartera vigente filtrada"
+              value={money(summary.facturacion)}
+              helper="Valor vigente de los contratos visibles, contabilizado una sola vez desde la fila titular."
+              icon={<BadgeDollarSign className="size-6" />}
+              accent="blue"
             />
             <KpiCard
               title="Adicionales personas"
@@ -246,7 +285,7 @@ export default function IncomeOverview({ active = true }) {
                 accent="emerald"
               >
                 <div className="grid items-center gap-4 sm:grid-cols-[1fr_auto]">
-                  <div className="h-72">
+                  <div className="relative h-72">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
@@ -264,6 +303,7 @@ export default function IncomeOverview({ active = true }) {
                         <Tooltip content={<CustomTooltip />} />
                       </PieChart>
                     </ResponsiveContainer>
+                    <div className="pointer-events-none absolute inset-0 grid place-content-center text-center"><strong className="text-2xl text-slate-950">{number(summary.vidas)}</strong><span className="text-[10px] font-black uppercase tracking-wider text-slate-400">protegidos</span></div>
                   </div>
                   <div className="space-y-3">
                     {composition.map((item) => (
@@ -291,31 +331,7 @@ export default function IncomeOverview({ active = true }) {
                 subtitle="Sedes con mayor cantidad de protegidos en el universo filtrado."
                 accent="violet"
               >
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={bySede}
-                      layout="vertical"
-                      margin={{ left: 12, right: 18 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                      <XAxis type="number" tickFormatter={number} />
-                      <YAxis
-                        dataKey="name"
-                        type="category"
-                        width={100}
-                        tick={{ fontSize: 11 }}
-                      />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar
-                        dataKey="vidas"
-                        name="Vidas"
-                        fill="#0f766e"
-                        radius={[0, 8, 8, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                <RankingList data={bySede} valueKey="vidas" color="#0f766e" limit={8} />
               </ChartCard>
             </div>
           )}
@@ -366,11 +382,57 @@ export default function IncomeOverview({ active = true }) {
               </div>
             </ChartCard>
           )}
-      </> : sectionView === "comercial" ? <CommercialPortfolio rows={filteredRows} /> : sectionView === "asesores" ? <CommercialIncome rows={advisorRows} selectedAdvisor={filters.asesor} onSelectAdvisor={(asesor) => setFilters((current) => ({ ...current, asesor }))} /> : sectionView === "composicion" ? <AffiliateComposition rows={rows} filters={filters} /> : sectionView === "sedes" ? <SiteSummary rows={siteRows} selectedSite={filters.sede} onSelectSite={(sede) => setFilters((current) => ({ ...current, sede }))} /> : sectionView === "planes" ? <PlanSummary rows={planRows} selectedPlan={filters.plan} onSelectPlan={(plan) => setFilters((current) => ({ ...current, plan }))} /> : sectionView === "convenios" ? <ConventionSummary rows={conventionRows} selectedConvention={filters.convenio} onSelectConvention={(convenio) => setFilters((current) => ({ ...current, convenio }))} /> : <RelationshipSummary rows={relationshipRows} selectedRelationship={filters.parentesco} onSelectRelationship={(parentesco) => setFilters((current) => ({ ...current, parentesco }))} />}
+        </>
+      ) : sectionView === "comercial" ? (
+        <CommercialPortfolio rows={filteredRows} />
+      ) : sectionView === "asesores" ? (
+        <CommercialIncome
+          rows={advisorRows}
+          selectedAdvisor={filters.asesor}
+          onSelectAdvisor={(asesor) =>
+            setFilters((current) => ({ ...current, asesor }))
+          }
+        />
+      ) : sectionView === "composicion" ? (
+        <AffiliateComposition rows={rows} filters={filters} />
+      ) : sectionView === "sedes" ? (
+        <SiteSummary
+          rows={siteRows}
+          selectedSite={filters.sede}
+          onSelectSite={(sede) =>
+            setFilters((current) => ({ ...current, sede }))
+          }
+        />
+      ) : sectionView === "planes" ? (
+        <PlanSummary
+          rows={planRows}
+          selectedPlan={filters.plan}
+          onSelectPlan={(plan) =>
+            setFilters((current) => ({ ...current, plan }))
+          }
+        />
+      ) : sectionView === "convenios" ? (
+        <ConventionSummary
+          rows={conventionRows}
+          selectedConvention={filters.convenio}
+          onSelectConvention={(convenio) =>
+            setFilters((current) => ({ ...current, convenio }))
+          }
+        />
+      ) : (
+        <RelationshipSummary
+          rows={relationshipRows}
+          selectedRelationship={filters.parentesco}
+          onSelectRelationship={(parentesco) =>
+            setFilters((current) => ({ ...current, parentesco }))
+          }
+        />
+      )}
+        </div>
+      </div>
     </div>
   );
 }
-
 function IncomeLoading() {
   return (
     <section className="card-shadow rounded-[2rem] border border-slate-200 bg-white px-6 py-14 text-center">
@@ -386,7 +448,7 @@ function IncomeLoading() {
 }
 function ErrorState({ message, onRetry }) {
   return (
-    <section className="card-shadow rounded-[2rem] border border-amber-200 bg-white px-6 py-12 text-center">
+    <section className="card-shadow rounded-4xl border border-amber-200 bg-white px-6 py-12 text-center">
       <h2 className="text-xl font-black text-slate-950">
         No fue posible consultar Ingresos
       </h2>
@@ -400,8 +462,4 @@ function ErrorState({ message, onRetry }) {
       </button>
     </section>
   );
-}
-
-function SectionButton({ active, onClick, children }) {
-  return <button type="button" onClick={onClick} className={`min-h-11 rounded-xl px-5 text-sm font-black transition ${active ? "bg-cyan-950 text-white shadow" : "text-slate-600 hover:bg-cyan-50"}`}>{children}</button>;
 }

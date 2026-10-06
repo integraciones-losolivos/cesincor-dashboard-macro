@@ -113,6 +113,7 @@ function AuthenticatedDashboard() {
     [accessibleModules, activeModule, availableModules],
   )
   const isAdmin = profile.role === 'admin'
+  const initials = String(profile.fullName || profile.email || 'U').split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('').toUpperCase()
 
   useEffect(() => {
     const closeProfileMenu = (event) => {
@@ -131,8 +132,8 @@ function AuthenticatedDashboard() {
 
   return (
     <div>
-      <nav className="sticky top-0 z-20 border-b border-emerald-100/80 bg-white/90 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+      <nav className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 px-4 py-2.5 shadow-[0_8px_30px_rgba(15,23,42,.05)] backdrop-blur-xl sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-[1600px] flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-emerald-950 via-emerald-800 to-lime-600 text-white shadow-lg shadow-emerald-950/20">
@@ -145,7 +146,7 @@ function AuthenticatedDashboard() {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-1">
+          <div className="flex flex-wrap gap-1.5 rounded-2xl border border-slate-200 bg-slate-50/90 p-1 shadow-inner shadow-slate-200/40">
             {availableModules.map((module) => {
               const Icon = module.icon
               const isActive = module.id === activeModule
@@ -177,9 +178,7 @@ function AuthenticatedDashboard() {
 
           <div ref={profileMenuRef} className="relative">
             <button type="button" onClick={() => setProfileMenuOpen((current) => !current)} aria-expanded={profileMenuOpen} className="flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-left shadow-sm transition hover:border-emerald-200 hover:shadow-md xl:w-auto">
-              <div className={`grid size-9 shrink-0 place-items-center rounded-xl ${isAdmin ? 'bg-violet-100 text-violet-700' : 'bg-emerald-100 text-emerald-800'}`}>
-                {isAdmin ? <ShieldCheck className="size-4.5" strokeWidth={2.6} /> : <UserRound className="size-4.5" strokeWidth={2.6} />}
-              </div>
+              <div className={`grid size-9 shrink-0 place-items-center rounded-full text-xs font-black ${isAdmin ? 'bg-gradient-to-br from-slate-700 to-teal-600 text-white' : 'bg-emerald-100 text-emerald-800'}`}>{initials}</div>
               <div className="min-w-0 flex-1">
                 <p className="max-w-44 truncate text-xs font-black text-slate-800">{profile.fullName || 'Usuario'}</p>
                 <p className={`max-w-44 truncate text-[11px] font-bold ${isAdmin ? 'text-violet-600' : 'text-slate-400'}`}>{isAdmin ? 'Administrador' : 'Usuario'} · {profile.email}</p>
@@ -188,6 +187,7 @@ function AuthenticatedDashboard() {
             </button>
             {profileMenuOpen && (
               <div className="absolute right-0 top-[calc(100%+0.6rem)] z-30 w-full min-w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-950/15 xl:w-72">
+                <div className="mb-2 flex items-center gap-3 rounded-xl bg-slate-50 p-3"><div className="grid size-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-slate-700 to-teal-600 text-xs font-black text-white">{initials}</div><div className="min-w-0"><p className="truncate text-sm font-black text-slate-900">{profile.fullName || 'Usuario'}</p><p className="truncate text-[11px] font-semibold text-slate-500">{profile.email}</p><p className="mt-0.5 text-[10px] font-black uppercase tracking-wider text-teal-700">{isAdmin ? 'Administrador' : 'Usuario'}</p></div></div>
                 {profile.role === 'admin' && <button type="button" onClick={() => { activateModule('usuarios'); setProfileMenuOpen(false) }} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black transition ${activeModule === 'usuarios' ? 'bg-violet-50 text-violet-800' : 'text-slate-700 hover:bg-slate-50'}`}><span className="grid size-9 place-items-center rounded-xl bg-violet-100 text-violet-700"><UsersRound className="size-4" /></span><span>Administrar usuarios</span></button>}
                 <div className="my-1 border-t border-slate-100" />
                 <button type="button" onClick={signOut} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-black text-rose-600 transition hover:bg-rose-50"><span className="grid size-9 place-items-center rounded-xl bg-rose-100 text-rose-600"><LogOut className="size-4" /></span><span>Cerrar sesión</span></button>

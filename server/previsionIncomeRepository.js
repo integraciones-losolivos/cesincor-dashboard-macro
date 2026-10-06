@@ -21,6 +21,13 @@ function calculateAge(dateValue, cutoff = new Date()) {
 }
 
 function normalizeRow(row, index) {
+  const convenioId = String(row.CONVENIO_ID ?? row.NUMERO_CONVENIO ?? '').trim()
+  const nombreConvenio = String(row.NOMBRE_CONVENIO || '').trim()
+  const nombreEmpresa = String(row.NOMBRE_EMPRESA || '').trim()
+  const nombreConvenioMostrar = String(row.NOMBRE_CONVENIO_MOSTRAR || nombreEmpresa || nombreConvenio || '').trim()
+  const convenio = convenioId
+    ? `${convenioId} - ${nombreConvenioMostrar || `CONVENIO ${convenioId}`}`
+    : 'SIN CONVENIO'
   return {
     id: `${row.CONTRATO || ''}-${row.LINEA ?? index}`,
     contrato: String(row.CONTRATO || ''),
@@ -29,7 +36,12 @@ function normalizeRow(row, index) {
     nombre: [row.PRIMER_NOMBRE, row.SEGUNDO_NOMBRE, row.PRIMER_APELLIDO, row.SEGUNDO_APELLIDO]
       .map((value) => String(value || '').trim()).filter(Boolean).join(' '),
     plan: row.PLAN || 'SIN PLAN',
-    convenio: row.CONVENIO || 'SIN CONVENIO',
+    numeroConvenio: convenioId,
+    convenioId,
+    nombreConvenio,
+    nombreEmpresa,
+    nombreConvenioMostrar: nombreConvenioMostrar || (convenioId ? `CONVENIO ${convenioId}` : 'SIN CONVENIO'),
+    convenio,
     sede: row.SEDE || 'SIN SEDE',
     asesor: row.ASESOR || '',
     tipoAfiliado: row.TIPO_BENEFICIARIO || 'SIN CLASIFICAR',
@@ -40,6 +52,7 @@ function normalizeRow(row, index) {
     fechaInicioVigencia: normalizedDate(row.FECHA_INICIO_VIGENCIA),
     fechaNacimiento: normalizedDate(row.FECHA_NACIMIENTO),
     valorFacturado: Number(row.VALOR_FACTURADO || 0),
+    fechaFactura: normalizedDate(row.FECHA_FACTURA),
   }
 }
 
@@ -74,25 +87,26 @@ export function buildIncomeAlertDetails(rows, alert, filters = {}) {
     .filter((row) => row.alertas.includes(alert)
       && matches(row.sede, filters.sede)
       && matches(row.plan, filters.plan)
-      && matches(row.convenio, filters.convenio)
+      && matches(row.convenioId, filters.convenio)
       && matches(row.asesor, filters.asesor)
       && matches(row.categoriaProtegido, filters.tipoAfiliado)
       && matches(row.parentesco, filters.parentesco)
       && matches(row.estado, filters.estado)
-      && (!search || [row.contrato, row.documento, row.nombre, row.plan, row.convenio, row.sede, row.asesor]
+      && (!search || [row.contrato, row.documento, row.nombre, row.plan, row.convenioId, row.convenio, row.nombreConvenio, row.nombreEmpresa, row.sede, row.asesor]
         .some((value) => String(value || '').toUpperCase().includes(search))))
     .slice(0, 500)
     .map((row) => ({
       id: row.id, contrato: row.contrato, documento: row.documento, nombre: row.nombre,
       categoriaProtegido: row.categoriaProtegido, estado: row.estado,
       fechaIngreso: row.fechaIngreso, fechaNacimiento: row.fechaNacimiento, edad: row.edad,
-      plan: row.plan, convenio: row.convenio, sede: row.sede, asesor: row.asesor,
+      plan: row.plan, convenioId: row.convenioId, numeroConvenio: row.numeroConvenio,
+      convenio: row.convenio, nombreConvenioMostrar: row.nombreConvenioMostrar, sede: row.sede, asesor: row.asesor,
       valorFacturado: row.valorFacturado,
     }))
 }
 
 export async function fetchPrevisionIncomeRows(range = {}) {
-  const key = `${range.from || ''}:${range.to || ''}`
+  const key = `${range.from || ''}:${range.to || ''}:${range.convenio || ''}`
   const hit = cache.get(key)
   if (!range.forceRefresh && hit && Date.now() - hit.createdAt < CACHE_TTL_MS) return hit.rows
 

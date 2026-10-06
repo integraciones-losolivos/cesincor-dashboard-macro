@@ -4,6 +4,7 @@ import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer,
 import ChartCard from '../ChartCard.jsx'
 import CustomTooltip from '../CustomTooltip.jsx'
 import KpiCard from '../KpiCard.jsx'
+import { RankingList } from './ExecutiveViz.jsx'
 import { money, number } from '../../utils/dashboard.js'
 import { buildCommercialKpis, buildCommercialPortfolio, buildDimensionPortfolio, buildIncomeComposition } from '../../utils/previsionIncome.js'
 
@@ -52,7 +53,7 @@ export default function CommercialIncome({ rows, selectedAdvisor, onSelectAdviso
 
     <div className="grid gap-6 xl:grid-cols-[1.4fr_0.6fr]">
       <ChartCard title="Ranking de asesores" subtitle="Compara hasta 20 responsables y selecciona uno para ver su portafolio." accent="emerald" right={<select value={metric} onChange={(event) => setMetric(event.target.value)} className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold text-slate-700"><option value="contratos">Contratos activos</option><option value="vidas">Personas protegidas</option><option value="facturacion">Facturación vigente</option><option value="vidasPorContrato">Promedio por contrato</option><option value="participacion">Participación</option></select>}>
-        <div className="h-[620px]"><ResponsiveContainer width="100%" height="100%"><BarChart data={chartRows} layout="vertical" margin={{ left: 20, right: 24 }}><CartesianGrid strokeDasharray="3 3" horizontal={false} /><XAxis type="number" tickFormatter={(value) => metric === 'facturacion' ? compactMoney(value) : metric === 'participacion' ? `${decimal(value)}%` : number(value)} /><YAxis dataKey="name" type="category" width={170} tick={{ fontSize: 10 }} /><Tooltip content={<CustomTooltip />} /><Bar dataKey={metric} name={metricLabels[metric]} radius={[0, 8, 8, 0]} onClick={(entry) => onSelectAdvisor(entry.name)} className="cursor-pointer">{chartRows.map((item, index) => <Cell key={item.name} fill={selected?.name === item.name ? '#0f766e' : chartColors[index % chartColors.length]} opacity={selected && selected.name !== item.name ? 0.35 : 1} />)}</Bar></BarChart></ResponsiveContainer></div>
+        <RankingList data={chartRows} valueKey={metric} formatter={(value) => metric === 'facturacion' ? compactMoney(value) : metric === 'participacion' ? `${decimal(value)}%` : number(value)} selected={selected?.name} onSelect={(item) => onSelectAdvisor(item.name)} color="#0f766e" />
       </ChartCard>
       <ChartCard title={selected ? `Composición de ${selected.name}` : 'Composición total'} subtitle="Titulares, adicionales, mascotas y beneficiarios." accent="violet"><Composition summary={visible} /></ChartCard>
     </div>
@@ -79,7 +80,7 @@ function AdvisorDetail({ advisor }) {
 
 function Composition({ summary }) { const data = buildIncomeComposition(summary); return <div><div className="h-72"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={data} dataKey="value" nameKey="name" innerRadius={60} outerRadius={96} paddingAngle={2}>{data.map((item) => <Cell key={item.name} fill={item.color} />)}</Pie><Tooltip content={<CustomTooltip />} /></PieChart></ResponsiveContainer></div><div className="space-y-2">{data.map((item) => <div key={item.name} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-sm"><span className="flex items-center gap-2 font-bold text-slate-600"><span className="size-2.5 rounded-full" style={{ backgroundColor: item.color }} />{item.name}</span><strong>{number(item.value)}</strong></div>)}</div></div> }
 function DarkChart({ title, children }) { return <div className="rounded-2xl bg-white p-4 text-slate-900"><h3 className="font-black">{title}</h3>{children}</div> }
-function HorizontalBars({ data, dataKey, name, color }) { return <div className="mt-3 h-64"><ResponsiveContainer width="100%" height="100%"><BarChart data={data} layout="vertical" margin={{ left: 12, right: 16 }}><CartesianGrid strokeDasharray="3 3" horizontal={false} /><XAxis type="number" tickFormatter={number} /><YAxis dataKey="name" type="category" width={145} tick={{ fontSize: 10 }} /><Tooltip content={<CustomTooltip />} /><Bar dataKey={dataKey} name={name} fill={color} radius={[0, 7, 7, 0]} /></BarChart></ResponsiveContainer></div> }
+function HorizontalBars({ data, dataKey, color }) { return <RankingList data={data} valueKey={dataKey} color={color} /> }
 function SortableHeader({ label, field, sort, onSort, right = false }) { const Icon = sort.key !== field ? ArrowUpDown : sort.direction === 'asc' ? ArrowUp : ArrowDown; return <th className={`px-3 py-3 ${right ? 'text-right' : ''}`}><button type="button" onClick={() => onSort(field)} className="inline-flex items-center gap-1 font-black">{label}<Icon className="size-3" /></button></th> }
 function emptySummary() { return { contratos: 0, vidas: 0, titulares: 0, adicionales: 0, adicionalesPersonas: 0, mascotas: 0, beneficiarios: 0, facturacion: 0, vidasPorContrato: 0 } }
 function decimal(value) { return Number(value || 0).toLocaleString('es-CO', { maximumFractionDigits: 1 }) }

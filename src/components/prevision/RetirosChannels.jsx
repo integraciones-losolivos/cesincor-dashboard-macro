@@ -4,19 +4,19 @@ import { Building2, PawPrint, Sigma, UserMinus, UsersRound } from 'lucide-react'
 import ChartCard from '../ChartCard.jsx'
 import CustomTooltip from '../CustomTooltip.jsx'
 import KpiCard from '../KpiCard.jsx'
+import { ShareStrip } from './ExecutiveViz.jsx'
 import { monthLabel, number, percent } from '../../utils/dashboard.js'
-import { buildCausalSummary, buildChannelDimension, buildChannelSummary, buildRetirosMonthly, groupRetiros, RETIRO_CHANNELS } from '../../utils/retiros.js'
+import { buildCausalSummary, buildChannelDimension, buildChannelSummary, buildRetirosKpis, buildRetirosMonthly, groupRetiros, RETIRO_CHANNELS } from '../../utils/retiros.js'
 
 const channelConfig = [
   { name: 'EMPRESARIALES', monthly: 'empresariales', dataKey: 'empresariales', label: 'Empresariales', color: '#0f766e' },
   { name: 'INDEPENDIENTES', monthly: 'independientes', dataKey: 'independientes', label: 'Independientes', color: '#2563eb' },
-  { name: 'ADICIONALES PERSONAS', monthly: 'adicionales', dataKey: 'adicionales_personas', label: 'Adicionales personas', color: '#ea580c' },
-  { name: 'ADICIONALES MASCOTAS', monthly: 'mascotas', dataKey: 'adicionales_mascotas', label: 'Adicionales mascotas', color: '#7c3aed' },
+  { name: 'SIN CLASIFICAR', monthly: 'sinClasificar', dataKey: 'sin_clasificar', label: 'Sin clasificar', color: '#64748b' },
 ]
 
 export default function RetirosChannels({ rows, from, to, onOpenDetail }) {
   const summary = useMemo(() => buildChannelSummary(rows), [rows])
-  const total = summary.reduce((sum, item) => sum + item.cantidad, 0)
+  const total = useMemo(() => buildRetirosKpis(rows).total, [rows])
   const leader = summary.reduce((best, item) => !best || item.cantidad > best.cantidad ? item : best, null)
   const [selectedChannel, setSelectedChannel] = useState('')
   const [visibleChannels, setVisibleChannels] = useState(() => new Set(RETIRO_CHANNELS))
@@ -28,7 +28,7 @@ export default function RetirosChannels({ rows, from, to, onOpenDetail }) {
   const byPlan = useMemo(() => buildChannelDimension(channelRows, 'plan', { limit: 8 }), [channelRows])
   const byAdvisor = useMemo(() => buildChannelDimension(channelRows, 'asesor', { limit: 8 }), [channelRows])
   const causes = useMemo(() => buildCausalSummary(channelRows).slice(0, 6), [channelRows])
-  const internalKey = activeChannel === 'ADICIONALES PERSONAS' || activeChannel === 'ADICIONALES MASCOTAS' ? 'tipo_retiro' : dimension
+  const internalKey = dimension
   const internal = useMemo(() => groupRetiros(channelRows, internalKey, { limit: 8 }), [channelRows, internalKey])
   const toggle = (channel) => setVisibleChannels((current) => { const next = new Set(current); if (next.has(channel)) next.delete(channel); else next.add(channel); return next })
 
@@ -36,13 +36,13 @@ export default function RetirosChannels({ rows, from, to, onOpenDetail }) {
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
       <KpiCard title="Retiros empresariales" value={number(summary[0]?.cantidad)} helper={`${percent(summary[0]?.porcentaje)} del total.`} icon={<Building2 className="size-6" />} accent="emerald" />
       <KpiCard title="Retiros independientes" value={number(summary[1]?.cantidad)} helper={`${percent(summary[1]?.porcentaje)} del total.`} icon={<UsersRound className="size-6" />} accent="blue" />
-      <KpiCard title="Adicionales personas" value={number(summary[2]?.cantidad)} helper={`${percent(summary[2]?.porcentaje)} del total.`} icon={<UserMinus className="size-6" />} accent="orange" />
-      <KpiCard title="Adicionales mascotas" value={number(summary[3]?.cantidad)} helper={`${percent(summary[3]?.porcentaje)} del total.`} icon={<PawPrint className="size-6" />} accent="violet" />
-      <KpiCard title="Total general" value={number(total)} helper={leader ? `Mayor participación: ${leader.name}.` : 'Sin retiros.'} icon={<Sigma className="size-6" />} accent="rose" />
+      <KpiCard title="Sin canal clasificado" value={number(summary[2]?.cantidad)} helper="Convenios sin UEN1/UEN2." icon={<Sigma className="size-6" />} accent="slate" />
+      <KpiCard title="Adicionales personas" value={number(buildRetirosKpis(rows).adicionales)} helper="Tipo de retiro, no canal." icon={<UserMinus className="size-6" />} accent="orange" />
+      <KpiCard title="Adicionales mascotas" value={number(buildRetirosKpis(rows).mascotas)} helper="Tipo de retiro, no canal." icon={<PawPrint className="size-6" />} accent="violet" />
     </div>
 
     <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
-      <ChartCard title="Comparativo entre canales" subtitle="Cantidad y participación dentro del periodo filtrado." accent="rose"><div className="h-80"><ResponsiveContainer width="100%" height="100%"><BarChart data={summary} layout="vertical"><CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" horizontal={false} /><XAxis type="number" allowDecimals={false} /><YAxis type="category" dataKey="name" width={165} tick={{ fontSize: 10 }} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="cantidad" name="Retiros" fill="#be123c" radius={[0, 9, 9, 0]} onClick={(entry) => setSelectedChannel(entry?.name || entry?.payload?.name || '')} /></BarChart></ResponsiveContainer></div></ChartCard>
+      <ChartCard title="Participación por canal" subtitle="La barra 100% permite comparar el peso relativo sin repetir cuatro barras." accent="violet"><ShareStrip data={summary} colors={channelConfig.map((item) => item.color)} /><div className="mt-4 grid grid-cols-2 gap-2">{summary.map((item) => <button key={item.name} onClick={() => setSelectedChannel(item.name)} className="rounded-xl border border-slate-100 px-3 py-2 text-left text-[11px] font-black text-slate-600 transition hover:bg-slate-50">Analizar {item.name.toLowerCase()}</button>)}</div></ChartCard>
       <ChartCard title="Evolución mensual por canal" subtitle="Activa o desactiva canales para facilitar la comparación." accent="blue"><div className="mb-4 flex flex-wrap gap-2">{channelConfig.map((item) => <button key={item.name} type="button" onClick={() => toggle(item.name)} className={`rounded-full border px-3 py-1.5 text-xs font-black ${visibleChannels.has(item.name) ? 'text-white' : 'border-slate-200 text-slate-400'}`} style={visibleChannels.has(item.name) ? { backgroundColor: item.color, borderColor: item.color } : undefined}>{item.label}</button>)}</div><div className="h-72"><ResponsiveContainer width="100%" height="100%"><LineChart data={monthly}><CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" vertical={false} /><XAxis dataKey="key" tickFormatter={(key) => monthLabel(`${key}-01`)} /><YAxis allowDecimals={false} /><Tooltip content={<CustomTooltip />} />{channelConfig.filter((item) => visibleChannels.has(item.name)).map((item) => <Line key={item.name} type="monotone" dataKey={item.monthly} name={item.label} stroke={item.color} strokeWidth={2.5} dot={false} activeDot={{ r: 6 }} />)}</LineChart></ResponsiveContainer></div></ChartCard>
     </div>
 

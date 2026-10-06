@@ -9,8 +9,8 @@ export default function SelectField({ label, value, onChange, options }) {
       >
         <option value="TODOS">Todos</option>
         {options.map((option) => (
-          <option value={option} key={option}>
-            {option}
+          <option value={typeof option === 'object' ? option.value : option} key={typeof option === 'object' ? option.value : option}>
+            {typeof option === 'object' ? option.label : option}
           </option>
         ))}
       </select>

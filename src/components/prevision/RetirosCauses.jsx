@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Area, AreaChart, Cell, CartesianGrid, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { CircleAlert, ListChecks, Search, Sigma, Trophy } from 'lucide-react'
 import ChartCard from '../ChartCard.jsx'
 import CustomTooltip from '../CustomTooltip.jsx'
 import KpiCard from '../KpiCard.jsx'
+import { RankingList } from './ExecutiveViz.jsx'
 import { monthLabel, normalizeText, number, percent } from '../../utils/dashboard.js'
 import { buildCausalMonthly, buildCausalSummary, buildRetirosKpis } from '../../utils/retiros.js'
 
 const NO_CAUSE = 'SIN CAUSAL IDENTIFICADA'
-const causeChannels = ['EMPRESARIALES', 'INDEPENDIENTES', 'ADICIONALES PERSONAS', 'ADICIONALES MASCOTAS']
+const causeChannels = ['EMPRESARIALES', 'INDEPENDIENTES', 'SIN CLASIFICAR']
 
 export default function RetirosCauses({ rows, onOpenDetail }) {
   const [selectedCause, setSelectedCause] = useState('')
@@ -38,8 +39,8 @@ export default function RetirosCauses({ rows, onOpenDetail }) {
       <KpiCard title="Principal causal" value={leader ? number(leader.cantidad) : '—'} helper={leader ? `${leader.name} · ${percent(leader.porcentaje)}` : 'Sin causal parametrizada.'} icon={<Trophy className="size-6" />} accent="violet" />
     </div>
 
-    <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-      <ChartCard title="Principales causales de retiro" subtitle="Top 10 por cantidad; selecciona una barra para ver su evolución y detalle." accent="rose"><div className="h-96"><ResponsiveContainer width="100%" height="100%"><BarChart data={summary.slice(0, 10)} layout="vertical" margin={{ left: 24 }}><CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" horizontal={false} /><XAxis type="number" allowDecimals={false} /><YAxis type="category" dataKey="name" width={190} tick={{ fontSize: 10 }} /><Tooltip content={<CustomTooltip />} /><Bar dataKey="cantidad" name="Retiros" fill="#be123c" radius={[0, 9, 9, 0]} onClick={(entry) => setSelectedCause(entry?.name || entry?.payload?.name || '')} /></BarChart></ResponsiveContainer></div></ChartCard>
+    <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+      <ChartCard title="Principales causales de retiro" subtitle="Participación y ranking; selecciona una causal para ver su evolución." accent="violet"><div className="grid gap-3 md:grid-cols-[.65fr_1.35fr]"><div className="h-52"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={summary.slice(0, 6)} dataKey="cantidad" nameKey="name" innerRadius={48} outerRadius={76} paddingAngle={2}>{summary.slice(0, 6).map((item, index) => <Cell key={item.name} fill={['#475569','#6366f1','#8b5cf6','#14b8a6','#f59e0b','#94a3b8'][index]} />)}</Pie><Tooltip content={<CustomTooltip />} /></PieChart></ResponsiveContainer></div><RankingList data={summary} color="#6366f1" limit={8} onSelect={setSelectedCause} /></div></ChartCard>
       <ChartCard title="Principal causal por canal" subtitle="La participación se calcula dentro de cada canal." accent="orange"><div className="space-y-3">{channelLeaders.map((item) => <button key={item.channel} type="button" onClick={() => item.cause !== 'SIN DATOS' && setSelectedCause(item.cause)} className="block w-full rounded-2xl border border-slate-100 bg-slate-50 p-4 text-left transition hover:border-rose-200 hover:bg-rose-50"><p className="text-[11px] font-black uppercase tracking-[.14em] text-slate-500">{item.channel}</p><div className="mt-1 flex items-end justify-between gap-3"><p className="font-black text-slate-900">{item.cause}</p><p className="shrink-0 text-sm font-black text-rose-700">{number(item.cantidad)} · {percent(item.porcentaje)}</p></div></button>)}</div></ChartCard>
     </div>
 

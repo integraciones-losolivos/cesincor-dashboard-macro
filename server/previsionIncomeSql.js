@@ -17,9 +17,23 @@ function incomeDateCondition(from, to) {
   return conditions.length ? conditions.join('\n      AND ') : '1 = 1'
 }
 
-export function buildPrevisionIncomeSql({ from = '', to = '' } = {}) {
+function billingDateCondition(from, to, alias = 'O') {
+  const validDate = /^\d{4}-\d{2}-\d{2}$/
+  const conditions = []
+  if (from && validDate.test(from)) conditions.push(`${alias}."RefDate" >= TO_DATE('${from}')`)
+  if (to && validDate.test(to)) conditions.push(`${alias}."RefDate" < ADD_DAYS(TO_DATE('${to}'), 1)`)
+  return conditions.length ? `AND ${conditions.join(`\n    AND `)}` : ''
+}
+
+export function buildPrevisionIncomeSql({ from = '', to = '', convenio = '' } = {}) {
   const schema = quotedSchema()
   const dateCondition = incomeDateCondition(from, to)
+  const billingDates = billingDateCondition(from, to)
+  const convenioId = String(convenio || '').trim()
+  if (convenioId && !/^\d+$/.test(convenioId)) {
+    throw new Error('El convenio de Ingresos debe ser un identificador numérico.')
+  }
+  const convenioCondition = convenioId ? `AND TH."U_conve" = ${Number(convenioId)}` : ''
 
   return `
 WITH TITULAR AS (
@@ -46,7 +60,15 @@ CONTRATOS_ACTIVOS AS (
     TH."DocEntry",
     TH."U_contrant" AS "CEDULA_CONTRATANTE",
     COALESCE(NULLIF(TRIM(TH."U_nompla"), ''), TH."U_plan") AS "PLAN",
-    TH."U_nomcon" AS "CONVENIO",
+    TH."U_conve" AS "NUMERO_CONVENIO",
+    CAST(TH."U_conve" AS NVARCHAR) AS "CONVENIO_ID",
+    C."U_nconv" AS "NOMBRE_CONVENIO",
+    C."U_empNom" AS "NOMBRE_EMPRESA",
+    COALESCE(
+      NULLIF(TRIM(C."U_empNom"), ''),
+      NULLIF(TRIM(C."U_nconv"), ''),
+      'SIN NOMBRE'
+    ) AS "NOMBRE_CONVENIO_MOSTRAR",
     TH."U_sucur" AS "SEDE",
     TH."U_nomVnd" AS "ASESOR_CONTRATO",
     TH."U_estado" AS "CODIGO_ESTADO",
@@ -54,15 +76,21 @@ CONTRATOS_ACTIVOS AS (
     TH."U_fecIn" AS "FECHA_INICIO_VIGENCIA"
   FROM ${schema}."@OK1_EXE_CONTR_HEAD" TH
   INNER JOIN TITULAR TIT ON TIT."DocEntry" = TH."DocEntry"
+  LEFT JOIN ${schema}."@OK1_EXE_CONV_HEAD" C ON C."DocEntry" = TH."U_conve"
   LEFT JOIN ${schema}."@OK1_EXE_ESTADOCONTR" EST ON EST."Code" = TH."U_estado"
   WHERE UPPER(TRIM(IFNULL(EST."Name", TH."U_estado"))) IN ('ACTIVO', 'ACT')
+    ${convenioCondition}
 ),
 PERSONAS AS (
   SELECT
     CA."DocEntry",
     TIT."LineId",
     CA."PLAN",
-    CA."CONVENIO",
+    CA."NUMERO_CONVENIO",
+    CA."CONVENIO_ID",
+    CA."NOMBRE_CONVENIO",
+    CA."NOMBRE_EMPRESA",
+    CA."NOMBRE_CONVENIO_MOSTRAR",
     CA."SEDE",
     CA."ASESOR_CONTRATO",
     IFNULL(NULLIF(TRIM(TIT."U_numdoc"), ''), CA."CEDULA_CONTRATANTE") AS "DOCUMENTO",
@@ -90,7 +118,11 @@ PERSONAS AS (
     CA."DocEntry",
     B."LineId",
     CA."PLAN",
-    CA."CONVENIO",
+    CA."NUMERO_CONVENIO",
+    CA."CONVENIO_ID",
+    CA."NOMBRE_CONVENIO",
+    CA."NOMBRE_EMPRESA",
+    CA."NOMBRE_CONVENIO_MOSTRAR",
     CA."SEDE",
     CA."ASESOR_CONTRATO",
     IFNULL(NULLIF(TRIM(B."U_numdoc"), ''), 'N/A') AS "DOCUMENTO",
@@ -245,6 +277,7 @@ FACTURACION_EMPRESA AS (
   LEFT JOIN FACT_COMPLEMENTO_EMPRESA FCE
     ON FCE."DOCENTRY" = CAST(F."U_contra" AS INTEGER) AND FCE."TRANSID" = O."TransId"
   WHERE O."TransCode" = 'OKEX' AND F."U_contra" IS NOT NULL
+    ${billingDates}
   GROUP BY F."U_contra", O."TransId", O."U_nFactExe", O."RefDate"
 ),
 FACTURACION_DIRECTA AS (
@@ -276,6 +309,7 @@ FACTURACION_DIRECTA AS (
   LEFT JOIN FACT_COMPLEMENTO_DIRECTO FCD ON FCD."DOCENTRY" = CAST(O."U_contra" AS INTEGER) AND FCD."TRANSID" = O."TransId"
   WHERE O."TransCode" = 'OKEX'
     AND O."U_contra" IS NOT NULL
+    ${billingDates}
     AND NOT EXISTS (
       SELECT 1
       FROM ${schema}."@OK1_EXE_FACT_OJDT" FX
@@ -306,10 +340,15 @@ SELECT
   P."DocEntry" AS "CONTRATO",
   P."LineId" AS "LINEA",
   P."PLAN",
-  P."CONVENIO",
+  P."NUMERO_CONVENIO",
+  P."CONVENIO_ID",
+  P."NOMBRE_CONVENIO",
+  P."NOMBRE_EMPRESA",
+  P."NOMBRE_CONVENIO_MOSTRAR",
   P."SEDE",
   COALESCE(NULLIF(TRIM(P."ASESOR_CONTRATO"), ''), 'N/A') AS "ASESOR",
   CASE WHEN P."TIPO_BENEFICIARIO" = 'TITULAR' THEN FC."VALOR_FACTURADO" ELSE NULL END AS "VALOR_FACTURADO",
+  CASE WHEN P."TIPO_BENEFICIARIO" = 'TITULAR' THEN TO_VARCHAR(FC."FECHA_FACTURA", 'YYYY-MM-DD') ELSE NULL END AS "FECHA_FACTURA",
   P."TIPO_BENEFICIARIO",
   CASE
     WHEN P."TIPO_BENEFICIARIO" = 'TITULAR' THEN 'TITULAR'
